@@ -1,4 +1,4 @@
-![](C:\Users\xmmpp\AppData\Roaming\marktext\images\f9e87bf1db2ad4412fc3783828c527b79e417ed3.jpg)
+![](screenshots/logo.jpg)
 
 # LandEX - 新一代的地皮管理插件
 
@@ -29,4 +29,17 @@ LandEX是一个基于LLSE的MC地皮管理插件，基于JavaScript为玩家带�
 
 - **方便迁移**：支持从其他领地插件迁移数据
 
-- **性能优越**：大量索引、缓存机制，大型红石机器也可流畅运作不受影响。
+- **性能优越**：使用索引+缓存机制，极大减少了时间复杂度。
+
+- **领地传送**：允许玩家设置传送点，快速传送到领地
+
+- **领地转卖**：允许玩家自行设置价格转卖领地
+
+### 使用截图
+
+| <img src="screenshots/Landmanage.png" title="领地管理" alt="" width="219"> | <img src="screenshots/LandPerm.png" title="权限管理" alt="权限管理" width="211"> | <img src="screenshots/LandName.png" title="" alt="" width="221"> |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+
+![边缘显示](screenshots/engeLine.png "边缘显示")
+
+![真指令注册](screenshots/realConnmand.png "真指令注册")
