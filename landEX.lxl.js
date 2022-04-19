@@ -208,7 +208,6 @@ const configAPI = {
             },
         },
         refund: {
-            enable: true,
             rate: 0.9,
         },
         common: {
@@ -1545,7 +1544,9 @@ function CommandEncloseHander(player, action) {
             }
             break;
         case "show":
-            playerState[player.xuid].state = "enclosing";
+            if (playerState[player.xuid].state !== "reEnclosing") {
+                playerState[player.xuid].state = "enclosing";
+            }
             if (playerState[player.xuid].enclosure.posA.length !== 0 && playerState[player.xuid].enclosure.posB.length !== 0 && enableDrawLine) {
                 // 画线
                 let posInter = twoPosFormat(playerState[player.xuid].enclosure.posA, playerState[player.xuid].enclosure.posB);
@@ -1585,12 +1586,10 @@ function CommandEncloseHander(player, action) {
                         return;
                     }
                     // 写state
-                    playerState[xuid].enclosure.posA[0] = parseInt(dt[1]);
-                    playerState[xuid].enclosure.posA[1] = parseInt(dt[2]);
-                    playerState[xuid].enclosure.posA[2] = parseInt(dt[3]);
-                    playerState[xuid].enclosure.posB[0] = parseInt(dt[4]);
-                    playerState[xuid].enclosure.posB[1] = parseInt(dt[5]);
-                    playerState[xuid].enclosure.posB[2] = parseInt(dt[6]);
+                    playerState[xuid].enclosure.posA = [parseInt(dt[1]), parseInt(dt[2]), parseInt(dt[3])];
+                    playerState[xuid].enclosure.posB = [parseInt(dt[4]), parseInt(dt[5]), parseInt(dt[6])];
+
+
                     pl.tell(i18n.$t("enclose.edit.success"));
                     if (playerState[player.xuid].enclosure.posA.length !== 0 && playerState[player.xuid].enclosure.posB.length !== 0 && enableDrawLine) {
                         // 画线
@@ -4601,7 +4600,7 @@ mc.listen("onWitherBossDestroy", (witherBoss, AAbb, aaBB) => {
  * @param {boolean} isOrg 
  */
 function recycleLand(player, landId, isOrg) {
-    if (!configAPI.data.refund.enable) {
+    if (!configAPI.data.refund.rate === 0) {
         //不让回收
         let fm = mc.newSimpleForm().setTitle(i18n.$t("recycle.gui.title")).setContent(i18n.$t("recycle.noPrem"));
         player.sendForm(fm, (pl, dt) => {
@@ -4691,9 +4690,9 @@ function reEnclosingHander(player, landId, isOrg) {
     playerState[player.xuid].state = "reEnclosing";
     playerState[player.xuid].editingLand.landId = landId;
     playerState[player.xuid].editingLand.isOrg = isOrg;
-    playerState[player.xuid].enclosure.posA = landData.range.max_position;
-    playerState[player.xuid].enclosure.posB = landData.range.min_position;
-    playerState[player.xuid].enclosure.dim = landData.range.dimid;
+    playerState[player.xuid].enclosure.posA = data.parseJson(data.toJson(landData.range.max_position));
+    playerState[player.xuid].enclosure.posB = data.parseJson(data.toJson(landData.range.min_position));
+    playerState[player.xuid].enclosure.dim = data.parseJson(data.toJson(landData.range.dimid));
 }
 function ReEnclosingScan(player) {
     let landId = playerState[player.xuid].editingLand.landId;
@@ -4745,7 +4744,6 @@ function ReEnclosingScan(player) {
     }
     //私人领地白名单
     let pWhiteList = playerState[player.xuid].editingLand.isOrg ? getPLandinRange(twoPosFormat(landData.range.min_position, landData.range.max_position), playerState[player.xuid].enclosure.dim, playerState[player.xuid].enclosure.type2D) : [landId];
-    log(pWhiteList);
     let conflictLandId;
     // 团队领地冲突检查：
     if (enableOrg) {
@@ -4781,6 +4779,8 @@ function ReEnclosingScan(player) {
     } else {
         newPrice = posInter.dx * posInter.dy * posInter.dz * configAPI.data.sell.type3D.priceXZ;
     }
+
+
     let oldIntr = twoPosFormat(landData.range.min_position, landData.range.max_position);
     let oldPrice = 0;
     if (landData.range.type2D) {
@@ -4803,11 +4803,11 @@ function ReEnclosingScan(player) {
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.payment.title"))
-                .setContent(i18n.$t("enclose.payment.moneyNoEnough", [configAPI.data.economy.moneyName, price, moneyUni.get(player)]));
+                .setContent(i18n.$t("enclose.payment.moneyNoEnough", [configAPI.data.economy.moneyName, String(price), moneyUni.get(player)]));
             player.sendForm(fm, () => { });
         } else {
             // 钱够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.pri", [price, moneyUni.get(player)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
+            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.pri", [String(price), moneyUni.get(player)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
                 if (dt == null) {
                     return;
                 }
@@ -4827,14 +4827,14 @@ function ReEnclosingScan(player) {
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.payment.title"))
-                .setContent(i18n.$t("enclose.payment.moneyNoEnough", [configAPI.data.economy.moneyName, price, moneyUni.get(player)]));
+                .setContent(i18n.$t("enclose.payment.moneyNoEnough", [configAPI.data.economy.moneyName, String(price), moneyUni.get(player)]));
             player.sendForm(fm, (pla, dt) => {
                 ManageLand(pla, landId, isOrg);
             });
             return;
         } else if (moneyUni.get(player) < price) {
             // 工会基金钱够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.ori", [price, orgAPI.orgGetMoney(landData.settings.owner)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
+            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.ori", [String(price), orgAPI.orgGetMoney(landData.settings.owner)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
                 if (dt == null) {
                     return;
                 }
@@ -4849,7 +4849,7 @@ function ReEnclosingScan(player) {
             return;
         } else if (orgAPI.orgGetMoney(landData.settings.owner) < price) {
             // 玩家钱包钱够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.pri", [price, moneyUni.get(player)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
+            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.pri", [String(price), moneyUni.get(player)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
                 if (dt == null) {
                     return;
                 }
@@ -4859,19 +4859,20 @@ function ReEnclosingScan(player) {
                             player.tell(i18n.$t("enclose.payment.error"));
                             return;
                         }
+                        ReEncloseMain(pl, landId, playerState[player.xuid].editingLand.isOrg, posInter);
                     } else {
                         if (!moneyUni.addMoney(player.xuid, -price)) {
                             player.tell(i18n.$t("enclose.payment.error"));
                             return;
                         }
+                        ReEncloseMain(pl, landId, playerState[player.xuid].editingLand.isOrg, posInter);
                     }
                     //encloseMain(pl, posInterface, orgNum);
-                    ReEncloseMain(pl, landId, playerState[player.xuid].editingLand.isOrg, posInter);
                 }
             });
         } else {
             // 钱都够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.choose", [price, moneyUni.get(player), orgAPI.orgGetMoney(landData.settings.owner)]), i18n.$t("enclose.pay.self"), i18n.$t("enclose.pay.org"), (pl, dt) => {
+            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.choose", [String(price), moneyUni.get(player), orgAPI.orgGetMoney(landData.settings.owner)]), i18n.$t("enclose.pay.self"), i18n.$t("enclose.pay.org"), (pl, dt) => {
                 if (dt == null) {
                     return;
                 }
@@ -4881,14 +4882,14 @@ function ReEnclosingScan(player) {
                             player.tell(i18n.$t("enclose.payment.error"));
                             return;
                         }
+                        ReEncloseMain(pl, landId, playerState[player.xuid].editingLand.isOrg, posInter);
                     } else {
                         if (!moneyUni.addMoney(player.xuid, -price)) {
                             player.tell(i18n.$t("enclose.payment.error"));
                             return;
                         }
+                        ReEncloseMain(pl, landId, playerState[player.xuid].editingLand.isOrg, posInter);
                     }
-                    //encloseMain(pl, posInterface, orgNum);
-                    ReEncloseMain(pl, landId, playerState[player.xuid].editingLand.isOrg, posInter);
                 } else {
                     if (!orgAPI.orgAddMoney(landData.settings.owner, -price)) {
                         player.tell(i18n.$t("enclose.payment.error"));
@@ -5424,19 +5425,19 @@ function UUIDManage(player) {
 
 //图片文字制作
 logger.log(
-"欢迎使用LandEX!\n##          ###    ##    ## ########  ######## ##     ##\n##         ## ##   ###   ## ##     ## ##        ##   ##\n##        ##   ##  ####  ## ##     ## ##         ## ##\n##       ##     ## ## ## ## ##     ## ######      ###    \n##       ######### ##  #### ##     ## ##         ## ##   \n##       ##     ## ##   ### ##     ## ##        ##   ##  \n######## ##     ## ##    ## ########  ######## ##     ## "
+    "欢迎使用LandEX!\n##          ###    ##    ## ########  ######## ##     ##\n##         ## ##   ###   ## ##     ## ##        ##   ##\n##        ##   ##  ####  ## ##     ## ##         ## ##\n##       ##     ## ## ## ## ##     ## ######      ###    \n##       ######### ##  #### ##     ## ##         ## ##   \n##       ##     ## ##   ### ##     ## ##        ##   ##  \n######## ##     ## ##    ## ########  ######## ##     ## "
 )
 //在线更新
-const version=1
+const version = 1
 
-function CheckUpdate(){
-    network.httpGet("http://static.vory.work/update.json",function(status,result){
-        if(status!==200){
-            logger,info(i18n.$t("update.networkError"));
+function CheckUpdate() {
+    network.httpGet("http://static.vory.work/update.json", function (status, result) {
+        if (status !== 200) {
+            logger, info(i18n.$t("update.networkError"));
             return;
         }
         let updateMessasge = data.parseJson(result);
-        if(updateMessasge.version>version){
+        if (updateMessasge.version > version) {
             logger.warn(i18n.$t("update.notify"));
             logger.warn(updateMessasge.log);
         }
