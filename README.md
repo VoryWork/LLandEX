@@ -35,8 +35,6 @@ LandEX是一个基于LLSE的MC地皮管理插件，基于JavaScript为玩家带�
 
 - **领地转卖**：允许玩家自行设置价格转卖领地
 
-
-
 ## 使用截图
 
 | <img src="screenshots/Landmanage.png" title="领地管理" alt="" width="219"> | <img src="screenshots/LandPerm.png" title="权限管理" alt="权限管理" width="211"> | <img src="screenshots/LandName.png" title="" alt="" width="221"> |
@@ -45,3 +43,17 @@ LandEX是一个基于LLSE的MC地皮管理插件，基于JavaScript为玩家带�
 ![边缘显示](screenshots/engeLine.png "边缘显示")
 
 ![真指令注册](screenshots/realConnmand.png "真指令注册")
+
+## 安装教程
+
+### 初始化插件
+
+1. 下载[BDS](https://www.minecraft.net/en-us/download/server/bedrock)并加载[LiteLDev/LiteLoaderBDS](https://github.com/LiteLDev/LiteLoaderBDS)
+
+2. 下载最新版本的[LLandEX](https://github.com/VoryWork/LLandEX/releases)
+
+3. 将最新版本的LandEX解压至BDS根目录的plugins文件夹下
+
+4. 启动**bedrock_server_mod.exe**，等待插件创建配置文件
+
+5. 关闭服务器。
