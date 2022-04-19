@@ -1727,7 +1727,7 @@ function enclosePayment(player, posInterface, orgNum = null) {
     } else if (configAPI.data.sell.type3D.priceY) {
         price = posInterface.dx * posInterface.dz * configAPI.data.sell.type3D.priceXZ + posInterface.dy * configAPI.data.sell.type3D.priceY;
     } else {
-        price = posInterface.dx * posInterface.dy * posInterfaces.dz * configAPI.data.sell.type3D.priceXZ;
+        price = posInterface.dx * posInterface.dy * posInterface.dz * configAPI.data.sell.type3D.priceXZ;
     }
     if (!orgNum) {
         // 直接发送付款页面
@@ -2882,6 +2882,10 @@ mc.listen(
      * @param {block} block
      */
     function (player, item, block, side) {
+        if (configAPI.data.operator.includes(player.xuid)) {
+            //管理员
+            return;
+        }
         logger.debug("onUseItemOn: block" + block.type);
         logger.debug("onUseItemOn item:" + item.type);
 
@@ -3356,6 +3360,10 @@ mc.listen(
         /**
          * @type {pos}
          */
+        if (configAPI.data.operator.includes(player.xuid)) {
+            //管理员
+            return;
+        }
         let pos = block.pos;
         let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
         if (landId) {
@@ -3518,6 +3526,10 @@ mc.listen(
 );
 mc.listen("onUseItem", (player, item) => {
     logger.debug(item.type);
+    if (configAPI.data.operator.includes(player.xuid)) {
+        //管理员
+        return;
+    }
     let pos = player.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
@@ -3550,6 +3562,10 @@ mc.listen("onUseItem", (player, item) => {
 //容器监控
 mc.listen("onOpenContainer", (player, block) => {
     logger.debug(block.type);
+    if (configAPI.data.operator.includes(player.xuid)) {
+        //管理员
+        return;
+    }
     let blockName = block.type;
     let pos = block.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
@@ -3694,6 +3710,10 @@ mc.listen("onHopperPushOut", (pos) => {
 });
 
 mc.listen("onUseFrameBlock", (player, block) => {
+    if (configAPI.data.operator.includes(player.xuid)) {
+        //管理员
+        return;
+    }
     let pos = block.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
@@ -3724,6 +3744,10 @@ mc.listen("onUseFrameBlock", (player, block) => {
 
 //放置方块
 mc.listen("onPlaceBlock", (player, block) => {
+    if (configAPI.data.operator.includes(player.xuid)) {
+        //管理员
+        return;
+    }
     let pos = block.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
@@ -3754,6 +3778,10 @@ mc.listen("onPlaceBlock", (player, block) => {
 
 //破坏方块
 mc.listen("onDestroyBlock", (player, block) => {
+    if (configAPI.data.operator.includes(player.xuid)) {
+        //管理员
+        return;
+    }
     let pos = block.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
@@ -3784,6 +3812,10 @@ mc.listen("onDestroyBlock", (player, block) => {
 
 //丢出物品
 mc.listen("onDropItem", (player, item) => {
+    if (configAPI.data.operator.includes(player.xuid)) {
+        //管理员
+        return;
+    }
     let pos = player.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
@@ -3814,6 +3846,10 @@ mc.listen("onDropItem", (player, item) => {
 
 //捡起物品
 mc.listen("onTakeItem", (player, entity, item) => {
+    if (configAPI.data.operator.includes(player.xuid)) {
+        //管理员
+        return;
+    }
     let pos = entity.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
@@ -3909,7 +3945,12 @@ mc.listen("onRide", (driver, target) => {
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     let isPlayer = driver.isPlayer();
     let player = driver.toPlayer();
+    if (isPlayer && configAPI.data.operator.includes(player.xuid)) {
+        //管理员
+        return;
+    }
     if (landId) {
+
         if (isPlayer && pLandDataInterface.inTrust(player.xuid, landId)) {
             return;
         }
@@ -4005,6 +4046,10 @@ mc.listen("onMobHurt", (target, source, damage) => {
 
 //进食
 mc.listen("onEat", (player, item) => {
+    if(configAPI.data.operator.includes(player.xuid)){
+        //管理员
+        return;
+    }
     let pos = player.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
@@ -4048,6 +4093,10 @@ mc.listen("onProjectileCreated", (shooter, entity) => {
             }
         }
         let player = shooter.toPlayer();
+        if(configAPI.data.operator.includes(player.xuid)){
+            //管理员
+            return;
+        }
         if (pLandDataInterface.inTrust(player.xuid, landId)) {
             return;
         }
@@ -4116,6 +4165,10 @@ mc.listen("onProjectileCreated", (shooter, entity) => {
 
 //修改盔甲架
 mc.listen("onChangeArmorStand", (as, player, item) => {
+    if(configAPI.data.operator.includes(player.xuid)){
+        //管理员
+        return;
+    }
     let pos = as.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
@@ -4523,10 +4576,10 @@ function ExplodeHander(landData, pos, range) {
         ny: landData.range.min_position[1] - pos.y,
         py: pos.y - landData.range.max_position[1],
     };
-    if (landData.range.type2D && (nx > range || px > range || nz > range || pz > range)) {
+    if (landData.range.type2D && (distance.nx > range || distance.px > range || distance.nz > range || distance.pz > range)) {
         //范围之外
         return true;
-    } else if (!landData.range.type2D && (nx > range || px > range || nz > range || pz > range || ny > range || py > range)) {
+    } else if (!landData.range.type2D && (distance.nx > range || distance.px > range || distance.nz > range || distance.pz > range || distance.ny > range || distance.py > range)) {
         //范围之外
         return true;
     }
@@ -4815,6 +4868,7 @@ function ReEnclosingScan(player) {
                         player.tell(i18n.$t("enclose.payment.error"));
                         return;
                     }
+                    ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
                     //encloseMain(pl, posInterface);
                 }
             });
@@ -4839,10 +4893,11 @@ function ReEnclosingScan(player) {
                 }
                 if (dt) {
                     if (!orgAPI.orgAddMoney(landData.settings.owner, -price)) {
-                        player.tell(i18n.$t("enclose.payment.error"));
+                        pl.tell(i18n.$t("enclose.payment.error"));
                         return;
                     }
                     //encloseMain(pl, posInterface, orgNum);
+                    ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
                 }
             });
             return;
@@ -4854,17 +4909,17 @@ function ReEnclosingScan(player) {
                 }
                 if (dt) {
                     if (price >= 0) {
-                        if (!moneyUni.pay(player, price)) {
-                            player.tell(i18n.$t("enclose.payment.error"));
+                        if (!moneyUni.pay(pl, price)) {
+                            pl.tell(i18n.$t("enclose.payment.error"));
                             return;
                         }
-                        ReEncloseMain(pl, landId, playerState[player.xuid].editingLand.isOrg, posInter);
+                        ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
                     } else {
-                        if (!moneyUni.addMoney(player.xuid, -price)) {
-                            player.tell(i18n.$t("enclose.payment.error"));
+                        if (!moneyUni.addMoney(pl.xuid, -price)) {
+                            pl.tell(i18n.$t("enclose.payment.error"));
                             return;
                         }
-                        ReEncloseMain(pl, landId, playerState[player.xuid].editingLand.isOrg, posInter);
+                        ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
                     }
                     //encloseMain(pl, posInterface, orgNum);
                 }
@@ -4877,25 +4932,25 @@ function ReEnclosingScan(player) {
                 }
                 if (dt) {
                     if (price >= 0) {
-                        if (!moneyUni.pay(player, price)) {
-                            player.tell(i18n.$t("enclose.payment.error"));
+                        if (!moneyUni.pay(pl, price)) {
+                            pl.tell(i18n.$t("enclose.payment.error"));
                             return;
                         }
-                        ReEncloseMain(pl, landId, playerState[player.xuid].editingLand.isOrg, posInter);
+                        ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
                     } else {
-                        if (!moneyUni.addMoney(player.xuid, -price)) {
-                            player.tell(i18n.$t("enclose.payment.error"));
+                        if (!moneyUni.addMoney(pl.xuid, -price)) {
+                            pl.tell(i18n.$t("enclose.payment.error"));
                             return;
                         }
-                        ReEncloseMain(pl, landId, playerState[player.xuid].editingLand.isOrg, posInter);
+                        ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
                     }
                 } else {
                     if (!orgAPI.orgAddMoney(landData.settings.owner, -price)) {
-                        player.tell(i18n.$t("enclose.payment.error"));
+                        pl.tell(i18n.$t("enclose.payment.error"));
                         return;
                     }
                     //encloseMain(pl, posInterface, orgNum);
-                    ReEncloseMain(pl, landId, playerState[player.xuid].editingLand.isOrg, posInter);
+                    ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
                 }
             });
         }
@@ -4918,7 +4973,7 @@ function ReEncloseMain(player, landId, isOrg, posInterface) {
     } else {
         landData = pLandDataInterface.data[landId];
     };
-    let range = {
+    const range = {
         type2D: playerState[player.xuid].enclosure.type2D,
         dimid: landData.range.dimid,
         min_position: [posInterface.minX, posInterface.minY, posInterface.minZ],
@@ -4941,10 +4996,10 @@ function ReEncloseMain(player, landId, isOrg, posInterface) {
         cache.clean();
     }
     player.tell(i18n.$t("reEnclosing.success"));
-    playerState[player.xuid].state = "playing";
     if (playerState[player.xuid].state === "reEnclosing") {
         playerState[player.xuid].editingLand.landId = "";
     }
+    playerState[player.xuid].state = "playing";
 }
 
 

@@ -157,15 +157,15 @@ const belongToApi = {
      * @param {string} landId
      * @returns {boolean}
      */
-    playerAddLand(player, landId) {
-        if (!this.data.player[player.xuid]) {
-            this.data.player[player.xuid] = [landId];
+    playerAddLand(xuid, landId) {
+        if (!this.data.player[xuid]) {
+            this.data.player[xuid] = [landId];
             return true;
         }
-        if (this.data.player[player.xuid].includes(landId)) {
+        if (this.data.player[xuid].includes(landId)) {
             return false;
         }
-        this.data.player[player.xuid].push(landId);
+        this.data.player[xuid].push(landId);
         return true;
     },
     /**
@@ -174,15 +174,15 @@ const belongToApi = {
      * @param {string} landId
      * @returns {boolean}
      */
-    playerAddShare(player, landId) {
-        if (!this.data.shared[player.xuid]) {
-            this.data.shared[player.xuid] = [landId];
+    playerAddShare(xuid, landId) {
+        if (!this.data.shared[xuid]) {
+            this.data.shared[xuid] = [landId];
             return true;
         }
-        if (this.data.shared[player.xuid].includes(landId)) {
+        if (this.data.shared[xuid].includes(landId)) {
             return false;
         }
-        this.data.shared[player.xuid].push(landId);
+        this.data.shared[xuid].push(landId);
         return true;
     },
     /**
