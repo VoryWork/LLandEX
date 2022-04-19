@@ -48,12 +48,68 @@ LandEX是一个基于LLSE的MC地皮管理插件，基于JavaScript为玩家带�
 
 ### 初始化插件
 
-1. 下载[BDS](https://www.minecraft.net/en-us/download/server/bedrock)并加载[LiteLDev/LiteLoaderBDS](https://github.com/LiteLDev/LiteLoaderBDS)
+1. 下载[BDS](https://www.minecraft.net/en-us/download/server/bedrock)并加载[LiteLDev/LiteLoaderBDS](https://github.com/LiteLDev/LiteLoaderBDS)。
 
-2. 下载最新版本的[LLandEX](https://github.com/VoryWork/LLandEX/releases)
+2. 下载最新版本的[LLandEX](https://github.com/VoryWork/LLandEX/releases)。
 
-3. 将最新版本的LandEX解压至BDS根目录的plugins文件夹下
+3. 将最新版本的LandEX解压至BDS根目录的plugins文件夹下。
 
-4. 启动**bedrock_server_mod.exe**，等待插件创建配置文件
+4. 启动**bedrock_server_mod.exe**，等待插件创建配置文件.
 
 5. 关闭服务器。
+
+### 修改配置文件
+
+请参考以下内容修改配置文件
+
+```json
+{
+    "economy": { //经济选项
+        "useLLmoney": false, //使用LLmoney，false则为使用记分板
+        "moneyScoreboard": "coin",//货币记分板
+        "moneyName": "祭点"//服务器中的货币名称
+    },
+    "sell": {//领地价格
+        "type3D": {//3D领地价格请看注释1
+            "priceXZ": 2,
+            "priceY": 0
+        },
+        "type2D": {//2D领地价格
+            "priceSquare": 200
+        }
+    },
+    "refund": {//领地回收价格
+        "enable": true,//允许回收
+        "rate": 0.9//回收损耗，1则原价回收，0则回收无收益
+    },
+    "common": {//普通设置
+        "language": "zh-cn",//插件语言
+        "allow3D": true,//允许3D圈地
+        "allow2D": true,//允许2D圈地
+        "useOrgnization": true,//启用orgEX联动
+        "allowLandTeleport": true,//允许传送到领地
+        "useDrawLine": true,//与PFES的框选粒子联动
+        "tickRate": 1000,//领地提示刷新时间，无特殊原因不改
+        "enableCache": true,//是否启用缓存，建议启用
+        "cacheSize": 512//缓存区大小，无特殊原因不改。
+    },
+    "limit": {
+        "allowDimension": [//允许圈地的维度
+            0,
+            1,
+            2
+        ],
+        "type2DSquare": [//2D圈地面积限制
+            10,
+            10000
+        ],
+        "type3DVolume": [//3D圈地面积限制
+            100,
+            384000
+        ]
+    },
+    "operator": [//领地管理员的XUID
+        "2535443490147382"
+    ]
+}
+```
