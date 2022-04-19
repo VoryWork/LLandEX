@@ -4625,7 +4625,7 @@ function recycleLand(player, landId, isOrg) {
     } else if (configAPI.data.sell.type3D.priceY) {
         price = posInterface.dx * posInterface.dz * configAPI.data.sell.type3D.priceXZ + posInterface.dy * configAPI.data.sell.type3D.priceY;
     } else {
-        price = posInterface.dx * posInterface.dy * posInterfaces.dz * configAPI.data.sell.type3D.priceXZ;
+        price = posInterface.dx * posInterface.dy * posInterface.dz * configAPI.data.sell.type3D.priceXZ;
     }
     price = parseInt(price * configAPI.data.refund.rate);
     player.sendModalForm(i18n.$t("recycle.gui.title"), i18n.$t("recycle.gui.desp", [landId, (isOrg ? i18n.$t("this.manage.choose.org") : i18n.$t("this.manage.choose.pri")), landData.settings.name, price]), i18n.$t("common.YES"), i18n.$t("common.NO"), (pl, dt) => {
@@ -4672,12 +4672,11 @@ function recycleLand(player, landId, isOrg) {
                 moneyUni.addMoney(landData.settings.owner, price);
             }
             //成功提示
-
+            //成功提示
+            let fm = mc.newSimpleForm().setTitle(i18n.$t("recycle.gui.title")).setContent(i18n.$t("recycle.gui.success"));
+            player.sendForm(fm, (pl, dt) => {
+            });
         }
-        //成功提示
-        let fm = mc.newSimpleForm().setTitle(i18n.$t("recycle.gui.title")).setContent(i18n.$t("recycle.gui.success"));
-        player.sendForm(fm, (pl, dt) => {
-        });
     });
 }
 function reEnclosingHander(player, landId, isOrg) {
