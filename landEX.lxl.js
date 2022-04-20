@@ -9,7 +9,7 @@
 */
 
 //在线更新
-const version = 3
+const version = 4
 
 
 /**
@@ -367,36 +367,36 @@ const belongToApi = {
     },
     /**
      *
-     * @param {player} player
+     * @param {string} xuid
      * @param {string} landId
      * @returns {boolean}
      */
-    playerAddLand(player, landId) {
-        if (!this.data.player[player.xuid]) {
-            this.data.player[player.xuid] = [landId];
+    playerAddLand(xuid, landId) {
+        if (!this.data.player[xuid]) {
+            this.data.player[xuid] = [landId];
             return true;
         }
-        if (this.data.player[player.xuid].includes(landId)) {
+        if (this.data.player[xuid].includes(landId)) {
             return false;
         }
-        this.data.player[player.xuid].push(landId);
+        this.data.player[xuid].push(landId);
         return true;
     },
     /**
      *
-     * @param {player} player
+     * @param {string} xuid
      * @param {string} landId
      * @returns {boolean}
      */
-    playerAddShare(player, landId) {
-        if (!this.data.shared[player.xuid]) {
-            this.data.shared[player.xuid] = [landId];
+    playerAddShare(xuid, landId) {
+        if (!this.data.shared[xuid]) {
+            this.data.shared[xuid] = [landId];
             return true;
         }
-        if (this.data.shared[player.xuid].includes(landId)) {
+        if (this.data.shared[xuid].includes(landId)) {
             return false;
         }
-        this.data.shared[player.xuid].push(landId);
+        this.data.shared[xuid].push(landId);
         return true;
     },
     /**
@@ -2074,7 +2074,7 @@ function encloseMain(player, posInterface, orgNum = null) {
             },
         };
         ChunkInterface.linkPrivate(uuid);
-        belongToApi.playerAddLand(player, uuid);
+        belongToApi.playerAddLand(player.xuid, uuid);
         belongToApi.save();
         pLandDataInterface.save();
         if (configAPI.data.common.enableCache) {
