@@ -16,18 +16,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Install Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '16'
         cache: 'npm'
+
     - name: Compress the JS
     - run: npm install uglify-js -g
     - run: uglifyjs --compress --mangle -- landEX.lxl.js -o landEX.lxl.min.js
+
     - name: Moving 
     - run: mkdir dist
-    - run: mv landEX.lxl.min.js dist/
-    - name: upload artifacts
+    - run: mv landEX.lxl.min.js dist
+    - run: mv js_data/ dist
+    - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
         name: "LandEX_Package"
