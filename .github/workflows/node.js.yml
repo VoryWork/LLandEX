@@ -16,6 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+
     - name: Install Node.js
       uses: actions/setup-node@v3
       with:
@@ -23,15 +24,16 @@ jobs:
         cache: 'npm'
 
     - name: Compress the JS
-    - run: |
+      run: |
         npm install uglify-js -g
         uglifyjs --compress --mangle -- landEX.lxl.js -o landEX.lxl.min.js
 
     - name: Moving 
-    - run: |
+      run: |
         mkdir dist
         mv landEX.lxl.min.js dist
         mv js_data/ dist
+
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
