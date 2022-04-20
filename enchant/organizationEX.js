@@ -344,7 +344,7 @@ function saveMoney(player, orgNum) {
                 return;
             }
         } else {
-            if (!player.reduce(config.moneyScoreboard, parseInt(dt[1]))) {
+            if (!player.reduceScore(config.moneyScoreboard, parseInt(dt[1]))) {
                 pl.tell("[公会]操作失败，请联系管理员！");
                 return;
             }

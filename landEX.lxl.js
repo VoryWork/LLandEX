@@ -7,6 +7,11 @@
           Copyright@VoryWork
 =======================================
 */
+
+//在线更新
+const version = 3
+
+
 /**
  * The complete Triforce, or one or more components of the Triforce.
  * @typedef {Object} pos --坐标对象
@@ -421,7 +426,7 @@ const belongToApi = {
         if (!this.data.shared[xuid] || !this.data.shared[xuid].includes(landId)) {
             return false;
         }
-        this.data.shared[xuid].splice(!this.data.shared[xuid].indexOf(landId), 1);
+        this.data.shared[xuid].splice(this.data.shared[xuid].indexOf(landId), 1);
         return true;
     },
     /**
@@ -434,7 +439,7 @@ const belongToApi = {
         if (!this.data.player[xuid] || !this.data.player[xuid].includes(landId)) {
             return false;
         }
-        this.data.player[xuid].splice(!this.data.player[xuid].indexOf(landId), 1);
+        this.data.player[xuid].splice(this.data.player[xuid].indexOf(landId), 1);
         return true;
     },
     /**
@@ -447,7 +452,7 @@ const belongToApi = {
         if (!this.data.org[orgNum] || !this.data.org[orgNum].includes(landId)) {
             return false;
         }
-        this.data.org[orgNum].splice(!this.data.org[orgNum].indexOf(landId), 1);
+        this.data.org[orgNum].splice(this.data.org[orgNum].indexOf(landId), 1);
         return true;
     },
     /**
@@ -1051,7 +1056,7 @@ const cache = {
 function getPLandIdbyPos(x, y, z, dim) {
     if (configAPI.data.common.enableCache) {
         // 如果有缓存，不妨试一试
-        let result = cache.try("pr:" + x + "," + y + "," + z + "," + dim);
+        let result = cache.try(`p:${x},${y},${z},${dim}`);
         if (result === "em") {
             logger.debug("缓存命中:空");
             return null;
@@ -1069,7 +1074,7 @@ function getPLandIdbyPos(x, y, z, dim) {
             logger.debug("区块索引命中：" + item);
             if (configAPI.data.common.enableCache) {
                 // 存入缓存
-                cache.push("pr:" + x + "," + y + "," + z + "," + dim, item);
+                cache.push(`p:${x},${y},${z},${dim}`, item);
                 return item;
             }
         } else {
@@ -1079,7 +1084,7 @@ function getPLandIdbyPos(x, y, z, dim) {
     // 啥都没有，吧啥都没有这个结果存入缓存
     if (configAPI.data.common.enableCache) {
         // 存入缓存
-        cache.push("pr:" + x + "," + y + "," + z + "," + dim, "em");
+        cache.push(`p:${x},${y},${z},${dim}`, "em");
         return null;
     }
     return null;
@@ -1096,7 +1101,7 @@ function getOLandIdbyPos(x, y, z, dim) {
     // 前面的区域以后再来探索吧
     if (configAPI.data.common.enableCache) {
         // 如果有缓存，不妨试一试
-        let result = cache.try("og:" + x + "," + y + "," + z + "," + dim);
+        let result = cache.try(`o:${x},${y},${z},${dim}`);
         if (result === "em") {
             logger.debug("缓存命中:空");
             return null;
@@ -1114,7 +1119,7 @@ function getOLandIdbyPos(x, y, z, dim) {
             logger.debug("区块索引命中：" + item);
             if (configAPI.data.common.enableCache) {
                 // 存入缓存
-                cache.push("og:" + x + "," + y + "," + z + "," + dim, item);
+                cache.push(`o:${x},${y},${z},${dim}`, item);
                 return item;
             }
         } else {
@@ -1123,7 +1128,7 @@ function getOLandIdbyPos(x, y, z, dim) {
     // 啥都没有，吧啥都没有这个结果存入缓存
     if (configAPI.data.common.enableCache) {
         // 存入缓存
-        cache.push("og:" + x + "," + y + "," + z + "," + dim, "em");
+        cache.push(`o:${x},${y},${z},${dim}`, "em");
         return null;
     }
     return null;
@@ -4315,10 +4320,10 @@ function CommandTpGuiHander(player) {
     }
     let landList = [];
     let tLandList = belongToApi.data.player[player.xuid];
-    if (tLandList) {
+    if (tLandList && tLandList.length!==0) {
         for (const landId of tLandList) {
             let landData = pLandDataInterface.data[landId];
-            if (landData.teleport.length !== 0) {
+            if (landData && landData.teleport.length !== 0) {
                 landList.push({
                     isOrg: false,
                     name: landData.settings.name,
@@ -4329,10 +4334,10 @@ function CommandTpGuiHander(player) {
         }
     }
     tLandList = belongToApi.data.shared[player.xuid];
-    if (tLandList) {
+    if (tLandList && tLandList.length!==0) {
         for (const landId of tLandList) {
             let landData = pLandDataInterface.data[landId];
-            if (landData.teleport.length !== 0) {
+            if (landData && landData.teleport.length !== 0) {
                 landList.push({
                     isOrg: false,
                     name: landData.settings.name,
@@ -4344,10 +4349,10 @@ function CommandTpGuiHander(player) {
     }
     if (enableOrg && orgAPI.getOrgNum(player.xuid)) {
         tLandList = belongToApi.data.org[orgAPI.getOrgNum(player.xuid)];
-        if (tLandList) {
+        if (tLandList && tLandList.length!==0) {
             for (const landId of tLandList) {
                 let landData = OlandDataInterface.data[landId];
-                if (landData.teleport.length !== 0) {
+                if (landData && landData.teleport.length !== 0) {
                     landList.push({
                         isOrg: true,
                         name: landData.settings.name,
@@ -5479,11 +5484,8 @@ function UUIDManage(player) {
 
 //图片文字制作
 logger.log(
-    "欢迎使用LandEX!\n##          ###    ##    ## ########  ######## ##     ##\n##         ## ##   ###   ## ##     ## ##        ##   ##\n##        ##   ##  ####  ## ##     ## ##         ## ##\n##       ##     ## ## ## ## ##     ## ######      ###    \n##       ######### ##  #### ##     ## ##         ## ##   \n##       ##     ## ##   ### ##     ## ##        ##   ##  \n######## ##     ## ##    ## ########  ######## ##     ## "
+    "欢迎使用LandEX\n __          ___      .__   __.  _______   __________   ___ \r\n|  |        /   \\     |  \\ |  | |       \\ |   ____\\  \\ /  / \r\n|  |       /  ^  \\    |   \\|  | |  .--.  ||  |__   \\  V  /  \r\n|  |      /  /_\\  \\   |  . `  | |  |  |  ||   __|   >   <   \r\n|  `----./  _____  \\  |  |\\   | |  \'--\'  ||  |____ /  .  \\  \r\n|_______/__/     \\__\\ |__| \\__| |_______/ |_______/__/ \\__\\ \r\n"
 )
-//在线更新
-const version = 1
-
 function CheckUpdate() {
     network.httpGet("http://static.vory.work/update.json", function (status, result) {
         if (status !== 200) {
