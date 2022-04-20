@@ -29,9 +29,9 @@ jobs:
 
     - name: Moving 
     - run: |
-      mkdir dist
-      mv landEX.lxl.min.js dist
-      mv js_data/ dist
+        mkdir dist
+        mv landEX.lxl.min.js dist
+        mv js_data/ dist
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
