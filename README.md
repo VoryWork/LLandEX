@@ -214,13 +214,13 @@ if (priceY!==0) {
 
 确认范围后，可选择圈地类型
 
-![](screenshots/selectType.png)
+<img title="" src="screenshots/selectType.png" alt="" width="467">
 
 - 选择**2D/3D**类型的圈地，若您的配置文件中禁用了`allow2D`或`allow3D`则会跳过此选择步骤。
 
 - 若您启用了领地工会联动，并且您是工会工会管理员，则还可能要求您选择圈地的归属，并且在`工会基金`和`个人钱包`资金均足够购买时，还会让您选择付款账户。
 
-![](screenshots/buy.png)
+<img src="screenshots/buy.png" title="" alt="" width="466">
 
 点击确认付款，即可完成圈地。
 
@@ -240,11 +240,39 @@ if (priceY!==0) {
 
 通过此项可以查看对应领地的基本信息
 
-![](screenshots/landInfo.png)
+<img src="screenshots/landInfo.png" title="" alt="" width="469">
 
 #### 标识设置
 
 通过此项可以设置领地的名称等信息，以及其的展示策略。
+
+<img src="screenshots/landID.png" title="" alt="" width="464">
+
+- **领地名称（非常重要）**：本块领地的名称
+
+- **领地描述**：可选，目前没什么用
+
+- **底栏出入提示** ：在玩家进出领地时显示领地名称
+
+- **显示领主**：在对话栏显示领地的主人
+
+- **显示领地边界**：在玩家进出领地时显示领地边界
+
+![](screenshots/engeLineDesp.png)
+
+#### 事件管理
+
+可以管理领地内能发生的事件
+
+<img title="" src="screenshots/events.png" alt="" width="396">
+
+注意：
+
+- 活塞推动方块关闭后，当活塞推动的是空气或实体，活塞仍可伸缩。若想阻止活塞伸缩，请从`权限管理->红石`关闭。
+
+- 耕地退化似乎无法阻止因缺水引起的退化（待求证）？
+
+- **方块改变非常强力！** 请勿随意关闭！需要使用时请先测试效果。
 
 ## 等待制作
 
