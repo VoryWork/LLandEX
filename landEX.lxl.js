@@ -1,4 +1,3 @@
-//UpgradeEX* {"name":"LLandEX","platform":"gitee","target":"xmmpps\/LLandEX","currentRelease":"v1.0.6"} */
 
 /*
 =======================================
@@ -6,10 +5,6 @@
           Copyright@VoryWork
 =======================================
 */
-
-//在线更新
-const version = 4
-
 
 /**
  * The complete Triforce, or one or more components of the Triforce.
@@ -121,6 +116,9 @@ const version = 4
  * @property {boolean} allowUseBoat
  * @property {boolean} allowUseMinecart
  * @property {boolean} allowAttackEntity
+ * @property {boolean} allowAnimalSpawn
+ * @property {boolean} allowMobSpawn
+ * @property {boolean} allowNeutralSpawn
  */
 
 /**
@@ -1055,7 +1053,7 @@ const cache = {
 function getPLandIdbyPos(x, y, z, dim) {
     if (configAPI.data.common.enableCache) {
         // 如果有缓存，不妨试一试
-        let result = cache.try(`p:${x},${y},${z},${dim}`);
+        let result = cache.try(`p:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`);
         if (result === "em") {
             logger.debug("缓存命中:空");
             return null;
@@ -1069,11 +1067,11 @@ function getPLandIdbyPos(x, y, z, dim) {
     }
     let possibleLand = ChunkInterface.getChunksLand(x, z, dim, false);
     for (const item of possibleLand) {
-        if (pLandDataInterface.isPosInLand(x, y, z, dim, item)) {
+        if (pLandDataInterface.isPosInLand(parseInt(x), parseInt(y), parseInt(z), dim, item)) {
             logger.debug("区块索引命中：" + item);
             if (configAPI.data.common.enableCache) {
                 // 存入缓存
-                cache.push(`p:${x},${y},${z},${dim}`, item);
+                cache.push(`p:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`, item);
                 return item;
             }
         } else {
@@ -1100,7 +1098,7 @@ function getOLandIdbyPos(x, y, z, dim) {
     // 前面的区域以后再来探索吧
     if (configAPI.data.common.enableCache) {
         // 如果有缓存，不妨试一试
-        let result = cache.try(`o:${x},${y},${z},${dim}`);
+        let result = cache.try(`o:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`);
         if (result === "em") {
             logger.debug("缓存命中:空");
             return null;
@@ -1114,11 +1112,11 @@ function getOLandIdbyPos(x, y, z, dim) {
     }
     let possibleLand = ChunkInterface.getChunksLand(x, z, dim, true);
     for (const item of possibleLand) {
-        if (OlandDataInterface.isPosInLand(x, y, z, dim, item)) {
+        if (OlandDataInterface.isPosInLand(parseInt(x), parseInt(y), parseInt(z), dim, item)) {
             logger.debug("区块索引命中：" + item);
             if (configAPI.data.common.enableCache) {
                 // 存入缓存
-                cache.push(`o:${x},${y},${z},${dim}`, item);
+                cache.push(`o:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`, item);
                 return item;
             }
         } else {
@@ -1127,7 +1125,7 @@ function getOLandIdbyPos(x, y, z, dim) {
     // 啥都没有，吧啥都没有这个结果存入缓存
     if (configAPI.data.common.enableCache) {
         // 存入缓存
-        cache.push(`o:${x},${y},${z},${dim}`, "em");
+        cache.push(`o:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`, "em");
         return null;
     }
     return null;
@@ -1897,6 +1895,9 @@ function encloseMain(player, posInterface, orgNum = null) {
                     allowUseMinecart: true,
                     allowShoot: false,
                     allowAttackEntity: false,
+                    allowAnimalSpawn:true,
+                    allowMobSpawn:false,
+                    allowNeutralSpawn:true
                 },
                 container: {
                     openShulkerBox: false,
@@ -2011,6 +2012,9 @@ function encloseMain(player, posInterface, orgNum = null) {
                     allowUseMinecart: true,
                     allowShoot: false,
                     allowAttackEntity: false,
+                    allowAnimalSpawn:true,
+                    allowMobSpawn:false,
+                    allowNeutralSpawn:true
                 },
                 container: {
                     openShulkerBox: false,
@@ -2126,9 +2130,6 @@ mc.listen("onServerStarted", function () {
         }
     });
     landComm.setup();
-    setTimeout(() => {
-        CheckUpdate();
-    }, 5000);
 });
 
 // 对玩家执行this指令进行处理
@@ -2565,6 +2566,9 @@ function EntityPermissionManage(player, landId, isOrg = false) {
     fm.addSwitch(i18n.$t("manage.permission.entity.allowUseMinecart"), !!landData.permissions.entity.allowUseMinecart);
     fm.addSwitch(i18n.$t("manage.permission.entity.allowShoot"), !!landData.permissions.entity.allowShoot);
     fm.addSwitch(i18n.$t("manage.permission.entity.allowAttackEntity"), !!landData.permissions.entity.allowAttackEntity);
+    fm.addSwitch(i18n.$t("manage.permission.entity.allowMobSpawn"), !!landData.permissions.entity.allowMobSpawn);
+    fm.addSwitch(i18n.$t("manage.permission.entity.allowNeutralSpawn"), !!landData.permissions.entity.allowNeutralSpawn);
+    fm.addSwitch(i18n.$t("manage.permission.entity.allowAnimalSpawn"), !!landData.permissions.entity.allowAnimalSpawn);
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             PermissionManageEntry(pl, landId, isOrg);
@@ -2575,6 +2579,9 @@ function EntityPermissionManage(player, landId, isOrg = false) {
         landData.permissions.entity.allowUseMinecart = dt[2];
         landData.permissions.entity.allowShoot = dt[3];
         landData.permissions.entity.allowAttackEntity = dt[4];
+        landData.permissions.entity.allowMobSpawn = dt[5];
+        landData.permissions.entity.allowNeutralSpawn = dt[6];
+        landData.permissions.entity.allowAnimalSpawn = dt[7];
         if (isOrg) {
             OlandDataInterface.data[landId].permissions = landData.permissions;
             OlandDataInterface.save();
@@ -4052,6 +4059,45 @@ mc.listen("onMobHurt", (target, source, damage) => {
     }
 });
 
+//生物生成控制
+mc.listen("onMobSpawn", (type, pos) => {
+    if(type==="minecraft:player"){
+        //是玩家，不拦截
+        return;
+    }
+    if(entityDB.blockType.includes(type)|| entityDB.projectile.includes(type)){
+        //实体不是生物，不拦截
+        return;
+    }
+    let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+    if (landId) {
+        let landData = pLandDataInterface.data[landId];
+        if(entityDB.mob.includes(type) && !landData.permissions.entity.allowMobSpawn){
+            return false;
+        }else if(entityDB.neutral.includes(type) && !landData.permissions.entity.allowNeutralSpawn){
+            return false;
+        }else if(entityDB.peaceful.includes(type) && !landData.permissions.entity.allowAnimalSpawn){
+            return false;
+        }
+        return;
+    }
+    if (!enableOrg) {
+        return;
+    }
+    landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+    if (landId) {
+        let landData = OlandDataInterface.data[landId];
+        if(entityDB.mob.includes(type) && !landData.permissions.entity.allowMobSpawn){
+            return false;
+        }else if(entityDB.neutral.includes(type) && !landData.permissions.entity.allowNeutralSpawn){
+            return false;
+        }else if(entityDB.peaceful.includes(type) && !landData.permissions.entity.allowAnimalSpawn){
+            return false;
+        }
+        return;
+    }
+});
+
 //进食
 mc.listen("onEat", (player, item) => {
     if(configAPI.data.operator.includes(player.xuid)){
@@ -5470,16 +5516,3 @@ function UUIDManage(player) {
 logger.log(
     "欢迎使用LandEX\n __          ___      .__   __.  _______   __________   ___ \r\n|  |        /   \\     |  \\ |  | |       \\ |   ____\\  \\ /  / \r\n|  |       /  ^  \\    |   \\|  | |  .--.  ||  |__   \\  V  /  \r\n|  |      /  /_\\  \\   |  . `  | |  |  |  ||   __|   >   <   \r\n|  `----./  _____  \\  |  |\\   | |  \'--\'  ||  |____ /  .  \\  \r\n|_______/__/     \\__\\ |__| \\__| |_______/ |_______/__/ \\__\\ \r\n"
 )
-function CheckUpdate() {
-    network.httpGet("http://static.vory.work/update.json", function (status, result) {
-        if (status !== 200) {
-            logger, info(i18n.$t("update.networkError"));
-            return;
-        }
-        let updateMessasge = data.parseJson(result);
-        if (updateMessasge.version > version) {
-            logger.warn(i18n.$t("update.notify"));
-            logger.warn(updateMessasge.log);
-        }
-    })
-}
