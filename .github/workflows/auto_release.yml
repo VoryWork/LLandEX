@@ -41,3 +41,19 @@ jobs:
       with:
         name: "LandEX_Package"
         path: dist
+    - name: Compressed to ZIP
+      uses: montudor/action-zip@v1
+      with:
+        args: zip -qq -r LLandEX-${{github.ref_name}}.zip dist
+    - name: Create release with assests
+      continue-on-error: true
+      uses: phuonghuynh/action-ghrelease@v1.1.0
+      env:
+        GITHUB_TOKEN: ${{secrets._GITHUB_PAT}}
+      with:
+        repository: ${{github.TOKEN}}
+        commitish: master
+        tag_name: ${{github.ref_name}}
+        name: Release From Action ${{github.ref_name}}
+        #          body: Auto release API ${{env.RELEASE_TAG}} by @ci
+        files: LLandEX-${{github.ref_name}}.zip
