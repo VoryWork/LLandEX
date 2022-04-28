@@ -222,6 +222,7 @@ const configAPI = {
             tickRate: 1000,
             enableCache: true,
             cacheSize: 512,
+            defaultSpawn: false,
         },
         limit: {
             allowDimension: [0, 1, 2],
@@ -4095,6 +4096,9 @@ mc.listen("onMobSpawn", (type, pos) => {
             return false;
         }
         return;
+    }
+    if(!configAPI.data.common.defaultSpawn){
+        return false;
     }
 });
 
