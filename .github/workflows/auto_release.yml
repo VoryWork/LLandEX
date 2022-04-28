@@ -47,13 +47,10 @@ jobs:
         args: zip -qq -r LLandEX-${{github.ref_name}}.zip dist
     - name: Create release with assests
       continue-on-error: true
-      uses: phuonghuynh/action-ghrelease@v1.1.0
+      uses: Hs1r1us/Release-AIO@v1
       env:
-        GITHUB_TOKEN: ${{secrets.TOKEN}}
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
       with:
-        repository: ${{github.repository}}
-        commitish: master
-        tag_name: ${{github.ref_name}}
-        name: Release From Action ${{github.ref_name}}
-        #          body: Auto release API ${{env.RELEASE_TAG}} by @ci
-        files: LLandEX-${{github.ref_name}}.zip
+        tag_name: ${{ github.ref_name }}
+        body: "Auto Release from Action"
+        asset_files: './LLandEX-${{github.ref_name}}.zip'
