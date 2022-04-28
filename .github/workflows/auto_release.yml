@@ -1,0 +1,43 @@
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Auto Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  compress:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16.x]
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Compress the JS
+      run: |
+        npm install uglify-js -g
+        uglifyjs landEX.lxl.js --compress --mangle -o landEX.lxl.min.js
+    - name: Writing UpdateEX info
+      run: |
+        node autopack.js ./landEX.lxl.min.js ${{github.repository}} "LLandEX" ${{github.ref_name}}
+    - name: Making Pack 
+      run: |
+        mkdir dist
+        cp landEX.lxl.min.js dist
+        cp js_data/ dist -r
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: "LandEX_Package"
+        path: dist

@@ -1,5 +1,4 @@
-// LiteXLoader Dev Helper
-// / <reference path="c:\Users\xmmpp\.vscode\extensions\moxicat.lxldevhelper-0.1.8/Library/JS/Api.js" />
+//UpgradeEX* {"name":"LLandEX","platform":"gitee","target":"xmmpps\/LLandEX","currentRelease":"v1.0.6"} */
 
 /*
 =======================================
@@ -234,10 +233,10 @@ const configAPI = {
         operator: [],
     },
     save() {
-        file.writeTo("./plugins/js_data/landEX/config.json", data.toJson(this.data, 4));
+        file.writeTo("./plugins/js_data/landEX/config.json", JSON.stringify(this.data));
     },
     reload() {
-        this.data = data.parseJson(File.readFrom("./plugins/js_data/landEX/config.json"));
+        this.data = JSON.parse(File.readFrom("./plugins/js_data/landEX/config.json"));
     },
 };
 // 读取已有的配置文件
@@ -477,10 +476,10 @@ const belongToApi = {
         return [];
     },
     save() {
-        file.writeTo("./plugins/js_data/landEX/owner.json", data.toJson(this.data, 4));
+        file.writeTo("./plugins/js_data/landEX/owner.json", JSON.stringify(this.data));
     },
     reload() {
-        this.data = data.parseJson(File.readFrom("./plugins/js_data/landEX/owner.json"));
+        this.data = JSON.parse(File.readFrom("./plugins/js_data/landEX/owner.json"));
     },
 };
 
@@ -497,10 +496,10 @@ const pLandDataInterface = {
      */
     data: {},
     save() {
-        file.writeTo("./plugins/js_data/landEX/priviteLandData.json", data.toJson(this.data, 4));
+        file.writeTo("./plugins/js_data/landEX/priviteLandData.json", JSON.stringify(this.data));
     },
     load() {
-        this.data = data.parseJson(File.readFrom("./plugins/js_data/landEX/priviteLandData.json"));
+        this.data = JSON.parse(File.readFrom("./plugins/js_data/landEX/priviteLandData.json"));
     },
     /**
      *
@@ -604,10 +603,10 @@ const OlandDataInterface = {
      */
     data: {},
     save() {
-        file.writeTo("./plugins/js_data/landEX/orgLandData.json", data.toJson(this.data, 4));
+        file.writeTo("./plugins/js_data/landEX/orgLandData.json", JSON.stringify(this.data));
     },
     load() {
-        this.data = data.parseJson(File.readFrom("./plugins/js_data/landEX/orgLandData.json"));
+        this.data = JSON.parse(File.readFrom("./plugins/js_data/landEX/orgLandData.json"));
     },
     /**
      *
@@ -724,7 +723,7 @@ const ChunkInterface = {
     },
     load() {
         logger.log("加载缓存的索引表...");
-        this.data = data.parseJson(File.readFrom("./plugins/js_data/landEX/landIndex.json"));
+        this.data = JSON.parse(File.readFrom("./plugins/js_data/landEX/landIndex.json"));
     },
     reload() {
         logger.log("正在构建索引表...");
@@ -794,7 +793,7 @@ const ChunkInterface = {
         logger.log("索引构建完成，共产生" + count + "条数据。");
     },
     save() {
-        file.writeTo("./plugins/js_data/landEX/landIndex.json", data.toJson(this.data, 4));
+        file.writeTo("./plugins/js_data/landEX/landIndex.json", JSON.stringify(this.data));
     },
     /**
      *
@@ -3896,6 +3895,10 @@ const entityDB = {
 };
 //玩家攻击实体
 mc.listen("onAttackEntity", (player, entity) => {
+    if(configAPI.data.operator.includes(player.xuid)){
+        //管理员
+        return;
+    }
     let pos = entity.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
@@ -4085,7 +4088,7 @@ mc.listen("onEat", (player, item) => {
 
 //弹射物监听
 
-mc.listen("onProjectileCreated", (shooter, entity) => {
+mc.listen("onSpawnProjectile", (shooter, type) => {
     let pos = shooter.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
@@ -4105,7 +4108,7 @@ mc.listen("onProjectileCreated", (shooter, entity) => {
         if (pLandDataInterface.inTrust(player.xuid, landId)) {
             return;
         }
-        if (entity.type === "minecraft:fishing_hook") {
+        if (type === "minecraft:fishing_hook") {
             //玩家钓鱼
             if (landData.permissions.player.fishing) {
                 return;
@@ -4113,7 +4116,7 @@ mc.listen("onProjectileCreated", (shooter, entity) => {
                 return false;
             }
         }
-        if (entity.type === "minecraft:splash_potion" || entity.type === "minecraft:lingering_potion") {
+        if (type === "minecraft:splash_potion" || type === "minecraft:lingering_potion") {
             //玩家扔药水
             if (landData.permissions.player.allowThrowPotion) {
                 return;
@@ -4141,10 +4144,14 @@ mc.listen("onProjectileCreated", (shooter, entity) => {
             }
         }
         let player = shooter.toPlayer();
+        if(configAPI.data.operator.includes(player.xuid)){
+            //管理员
+            return;
+        }
         if (OlandDataInterface.inTrust(player.xuid, landId)) {
             return;
         }
-        if (entity.type === "minecraft:fishing_hook") {
+        if (type === "minecraft:fishing_hook") {
             //玩家钓鱼
             if (landData.permissions.player.fishing) {
                 return;
@@ -4152,7 +4159,7 @@ mc.listen("onProjectileCreated", (shooter, entity) => {
                 return false;
             }
         }
-        if (entity.type === "minecraft:splash_potion" || entity.type === "minecraft:lingering_potion") {
+        if (type === "minecraft:splash_potion" || type === "minecraft:lingering_potion") {
             //玩家扔药水
             if (landData.permissions.player.allowThrowPotion) {
                 return;
@@ -4432,29 +4439,6 @@ mc.listen("onRedStoneUpdate", (block, level, isActive) => {
     }
 });
 
-//红石更新
-mc.listen("onRedStoneUpdate", (block, level, isActive) => {
-    let pos = block.pos;
-    let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
-    if (landId) {
-        let landData = pLandDataInterface.data[landId];
-        if (!landData.events.redstoneUpdate) {
-            return false;
-        }
-        return;
-    }
-    if (!enableOrg) {
-        return;
-    }
-    landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
-    if (landId) {
-        let landData = OlandDataInterface.data[landId];
-        if (!landData.events.redstoneUpdate) {
-            return false;
-        }
-        return;
-    }
-});
 
 //活塞推动，两事件要一块处理
 mc.listen("onPistonTryPush", (piston, block) => {
@@ -4687,7 +4671,7 @@ function recycleLand(player, landId, isOrg) {
     }
     price = parseInt(price * configAPI.data.refund.rate);
     player.sendModalForm(i18n.$t("recycle.gui.title"), i18n.$t("recycle.gui.desp", [landId, (isOrg ? i18n.$t("this.manage.choose.org") : i18n.$t("this.manage.choose.pri")), landData.settings.name, price]), i18n.$t("common.YES"), i18n.$t("common.NO"), (pl, dt) => {
-        if (dt == null) {
+        if (!dt) {
             ManageLand(pl, landId, isOrg);
         }
         if (dt) {

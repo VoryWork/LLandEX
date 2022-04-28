@@ -364,7 +364,10 @@ function exitOrg(player, orgNum) {
                 //这人是管理，要删除
                 orgData[orgNum].owner.splice(orgData[orgNum].owner.indexOf(pl.xuid), 1);
             }
-            delete orgData[orgNum].member[pl.xuid];
+            try {
+                delete orgData[orgNum].member[pl.xuid];
+            } catch (error) {
+            }
             file.writeTo("./plugins/js_data/organizationEX/orgData.json", data.toJson(orgData, 4));
             playerDB.delete(pl.xuid);
             pl.tell("[公会]§a退出成功");
