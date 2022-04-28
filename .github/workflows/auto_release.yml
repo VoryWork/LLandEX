@@ -49,9 +49,9 @@ jobs:
       continue-on-error: true
       uses: phuonghuynh/action-ghrelease@v1.1.0
       env:
-        GITHUB_TOKEN: ${{secrets._GITHUB_PAT}}
+        GITHUB_TOKEN: ${{secrets.TOKEN}}
       with:
-        repository: ${{github.TOKEN}}
+        repository: ${{github.repository}}
         commitish: master
         tag_name: ${{github.ref_name}}
         name: Release From Action ${{github.ref_name}}
