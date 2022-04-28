@@ -44,7 +44,7 @@ jobs:
     - name: Compressed to ZIP
       uses: montudor/action-zip@v1
       with:
-        args: zip -qq -r LLandEX-${{github.ref_name}}.zip dist
+        args: zip -qq -r LLandEX-${{github.ref_name}}.zip dist/*
     - name: Create release with assests
       continue-on-error: true
       uses: Hs1r1us/Release-AIO@v1.0
