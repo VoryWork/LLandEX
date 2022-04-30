@@ -93,7 +93,8 @@ LandEX是一个基于LLSE的MC地皮管理插件，基于JavaScript为玩家带�
         "useDrawLine": true,//与PFES的框选粒子联动
         "tickRate": 1000,//领地提示刷新时间，无特殊原因不改
         "enableCache": true,//是否启用缓存，建议启用
-        "cacheSize": 512//缓存区大小，无特殊原因不改
+        "cacheSize": 512,//缓存区大小，无特殊原因不改
+        "defaultSpawn": false,//默认生物自然生成
     },
     "limit": {
         "allowDimension": [//允许圈地的维度
