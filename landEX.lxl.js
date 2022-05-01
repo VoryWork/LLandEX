@@ -4139,6 +4139,10 @@ mc.listen("onEat", (player, item) => {
 //弹射物监听
 
 mc.listen("onSpawnProjectile", (shooter, type) => {
+    if(!shooter.type){
+        //发射器发射
+        return;
+    }
     let pos = shooter.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
