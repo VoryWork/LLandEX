@@ -187,9 +187,9 @@
  */
 logger.setTitle("LandEX");
 logger.setConsole(true, 4);
-if (!file.exists("./plugins/js_data/landEX/")) {
+if (!File.exists("./plugins/js_data/landEX/")) {
     log("首次运行，创建文件夹");
-    file.mkdir("./plugins/js_data/landEX/");
+    File.mkdir("./plugins/js_data/landEX/");
 }
 // 初始化领地系统配置
 const configAPI = {
@@ -231,7 +231,7 @@ const configAPI = {
         operator: [],
     },
     save() {
-        file.writeTo(
+        File.writeTo(
             "./plugins/js_data/landEX/config.json",
             JSON.stringify(this.data)
         );
@@ -243,7 +243,7 @@ const configAPI = {
     },
 };
 // 读取已有的配置文件
-if (file.exists("./plugins/js_data/landEX/config.json")) {
+if (File.exists("./plugins/js_data/landEX/config.json")) {
     configAPI.reload();
 } else {
     configAPI.save();
@@ -275,7 +275,7 @@ const i18n = {
     },
     reload() {
         if (
-            file.exists(
+            File.exists(
                 "./plugins/js_data/landEX/i18n/" +
                     configAPI.data.common.language +
                     ".json"
@@ -292,7 +292,7 @@ const i18n = {
     },
 };
 if (
-    file.exists(
+    File.exists(
         "./plugins/js_data/landEX/i18n/" +
             configAPI.data.common.language +
             ".json"
@@ -534,7 +534,7 @@ const belongToApi = {
         return [];
     },
     save() {
-        file.writeTo(
+        File.writeTo(
             "./plugins/js_data/landEX/owner.json",
             JSON.stringify(this.data)
         );
@@ -546,7 +546,7 @@ const belongToApi = {
     },
 };
 
-if (file.exists("./plugins/js_data/landEX/owner.json")) {
+if (File.exists("./plugins/js_data/landEX/owner.json")) {
     belongToApi.reload();
 } else {
     belongToApi.save();
@@ -559,7 +559,7 @@ const pLandDataInterface = {
      */
     data: {},
     save() {
-        file.writeTo(
+        File.writeTo(
             "./plugins/js_data/landEX/priviteLandData.json",
             JSON.stringify(this.data)
         );
@@ -683,7 +683,7 @@ const pLandDataInterface = {
         }
     },
 };
-if (file.exists("./plugins/js_data/landEX/priviteLandData.json")) {
+if (File.exists("./plugins/js_data/landEX/priviteLandData.json")) {
     pLandDataInterface.load();
 } else {
     pLandDataInterface.save();
@@ -695,7 +695,7 @@ const OlandDataInterface = {
      */
     data: {},
     save() {
-        file.writeTo(
+        File.writeTo(
             "./plugins/js_data/landEX/orgLandData.json",
             JSON.stringify(this.data)
         );
@@ -827,7 +827,7 @@ const OlandDataInterface = {
     },
 };
 
-if (file.exists("./plugins/js_data/landEX/orgLandData.json")) {
+if (File.exists("./plugins/js_data/landEX/orgLandData.json")) {
     OlandDataInterface.load();
 } else {
     OlandDataInterface.save();
@@ -952,7 +952,7 @@ const ChunkInterface = {
         logger.log("索引构建完成，共产生" + count + "条数据。");
     },
     save() {
-        file.writeTo(
+        File.writeTo(
             "./plugins/js_data/landEX/landIndex.json",
             JSON.stringify(this.data)
         );
@@ -1242,7 +1242,7 @@ const ChunkInterface = {
 };
 if (!configAPI.data.common.enableCache) {
     ChunkInterface.reload();
-} else if (file.exists("./plugins/js_data/landEX/landIndex.json")) {
+} else if (File.exists("./plugins/js_data/landEX/landIndex.json")) {
     ChunkInterface.load();
 } else {
     ChunkInterface.reload();
@@ -6812,7 +6812,7 @@ const playerDB = {
      */
     data: {},
     save() {
-        file.writeTo(
+        File.writeTo(
             "./plugins/js_data/landEX/playerDB.json",
             data.toJson(this.data)
         );
@@ -6824,7 +6824,7 @@ const playerDB = {
     },
 };
 // 读取已有的配置文件
-if (file.exists("./plugins/js_data/landEX/playerDB.json")) {
+if (File.exists("./plugins/js_data/landEX/playerDB.json")) {
     configAPI.reload();
 } else {
     configAPI.save();
