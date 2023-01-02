@@ -2,7 +2,7 @@
 
 # LandEX - 新一代的地皮管理插件
 
-LandEX是一个基于LLSE的MC地皮管理插件，基于JavaScript为玩家带来高效便捷的地皮使用体验。插件原生支持真指令注册，服内大量GUI管理，并可与OrgEX、LandEX与DrawLine插件联动。
+LandEX 是一个基于 LLSE 的 MC 地皮管理插件，基于 JavaScript 为玩家带来高效便捷的地皮使用体验。插件原生支持真命令注册，服内大量 GUI 管理，并可与 OrgEX、LandEX 与 DrawLine 插件联动。
 
 ### 联系作者
 
@@ -19,7 +19,7 @@ LandEX是一个基于LLSE的MC地皮管理插件，基于JavaScript为玩家带�
 
 - **完全开源**：代码规范，绝无后门，欢迎监督！
 
-- **双经济系统**：支持LLMoney与计分板双经济系统
+- **双经济系统**：支持 LLMoney 与计分板双经济系统
 
 - **多计费模式**：支持按面积\体积\混合模式计费
 
@@ -38,11 +38,11 @@ LandEX是一个基于LLSE的MC地皮管理插件，基于JavaScript为玩家带�
 ## 使用截图
 
 | <img src="screenshots/Landmanage.png" title="领地管理" alt="" width="219"> | <img src="screenshots/LandPerm.png" title="权限管理" alt="权限管理" width="211"> | <img src="screenshots/LandName.png" title="" alt="" width="221"> |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 
 ![边缘显示](screenshots/engeLine.png "边缘显示")
 
-![真指令注册](screenshots/realConnmand.png "真指令注册")
+![真命令注册](screenshots/realConnmand.png "真命令注册")
 
 ## 安装教程
 
@@ -52,7 +52,7 @@ LandEX是一个基于LLSE的MC地皮管理插件，基于JavaScript为玩家带�
 
 2. 下载最新版本的[LLandEX](https://github.com/VoryWork/LLandEX/releases)。
 
-3. 将最新版本的LandEX解压至BDS根目录的plugins文件夹下。
+3. 将最新版本的 LandEX 解压至 BDS 根目录的 plugins 文件夹下。
 
 4. 启动**bedrock_server_mod.exe**，等待插件创建配置文件.
 
@@ -66,130 +66,133 @@ LandEX是一个基于LLSE的MC地皮管理插件，基于JavaScript为玩家带�
 
 ```json
 {
-    "economy": { //经济选项
+    "economy": {
+        //经济选项
         "useLLmoney": false, //使用LLmoney，false则为使用记分板
-        "moneyScoreboard": "coin",//货币记分板
-        "moneyName": "祭点"//服务器中的货币名称
+        "moneyScoreboard": "coin", //货币记分板
+        "moneyName": "祭点" //服务器中的货币名称
     },
-    "sell": {//领地价格
-        "type3D": {//3D领地价格请看注释1
+    "sell": {
+        //领地价格
+        "type3D": {
+            //3D领地价格请看注释1
             "priceXZ": 2,
             "priceY": 0
         },
-        "type2D": {//2D领地价格
+        "type2D": {
+            //2D领地价格
             "priceSquare": 200
         }
     },
-    "refund": {//领地回收价格
-        "enable": true,//允许回收
-        "rate": 0.9//回收损耗，1则原价回收，0则回收无收益
+    "refund": {
+        //领地回收价格
+        "enable": true, //允许回收
+        "rate": 0.9 //回收损耗，1则原价回收，0则回收无收益
     },
-    "common": {//普通设置
-        "language": "zh-cn",//插件语言
-        "allow3D": true,//允许3D圈地
-        "allow2D": true,//允许2D圈地
-        "useOrgnization": true,//启用orgEX联动
-        "allowLandTeleport": true,//允许传送到领地
-        "useDrawLine": true,//与PFES的框选粒子联动
-        "tickRate": 1000,//领地提示刷新时间，无特殊原因不改
-        "enableCache": true,//是否启用缓存，建议启用
-        "cacheSize": 512,//缓存区大小，无特殊原因不改
-        "defaultSpawn": false,//默认生物自然生成
+    "common": {
+        //普通设置
+        "language": "zh-cn", //插件语言
+        "allow3D": true, //允许3D圈地
+        "allow2D": true, //允许2D圈地
+        "useOrgnization": true, //启用orgEX联动
+        "allowLandTeleport": true, //允许传送到领地
+        "useDrawLine": true, //与PFES的框选粒子联动
+        "tickRate": 1000, //领地提示刷新时间，无特殊原因不改
+        "enableCache": true, //是否启用缓存，建议启用
+        "cacheSize": 512, //缓存区大小，无特殊原因不改
+        "defaultSpawn": false //默认生物自然生成
     },
     "limit": {
-        "allowDimension": [//允许圈地的维度
-            0,
-            1,
-            2
+        "allowDimension": [
+            //允许圈地的维度
+            0, 1, 2
         ],
-        "type2DSquare": [//2D圈地面积限制
-            10,
-            10000
+        "type2DSquare": [
+            //2D圈地面积限制
+            10, 10000
         ],
-        "type3DVolume": [//3D圈地面积限制
-            100,
-            384000
+        "type3DVolume": [
+            //3D圈地面积限制
+            100, 384000
         ]
     },
-    "operator": [//领地管理员的XUID
+    "operator": [
+        //领地管理员的XUID
         "2535443490147382"
     ]
 }
 ```
 
-#### 3D圈地价格设置
+#### 3D 圈地价格设置
 
-3D领地有多种计价方式，可以参考以下以下伪代码
+3D 领地有多种计价方式，可以参考以下以下伪代码
 
 ```js
-if (priceY!==0) {
-        price = dx * dz * priceXZ + dy * priceY;
-    } else {
-        price = dx * dy * dz * priceXZ;
-    }
+if (priceY !== 0) price = dx * dz * priceXZ + dy * priceY;
+else price = dx * dy * dz * priceXZ;
 ```
 
-- 若您想按体积计费，可以将`priceY`设为0，再将`priceXZ`设为单位体积的价格。
+- 若您想按体积计费，可以将`priceY`设为 0，再将`priceXZ`设为单位体积的价格。
 
 - 若您想要通过高度和面积混合计费，可根据算式`dx * dz * priceXZ + dy * priceY`设置。
 
-- 更多计费方式可以提issue
+- 更多计费方式可以提 issue
 
 ## 使用教程
 
-### 常用指令说明
+### 常用命令说明
 
-本插件所有指令均为真指令注册，输入`/land`可以获得Tab提示。
+本插件所有命令均为真命令注册，输入`/land`可以获得 Tab 提示。
 
-#### 圈地指令
+#### 圈地命令
 
 > **/land enclose show**
-> 
+>
 > 进入圈地模式并展示上次圈地记录、领地边框，若您已经在圈地模式，则仅会展示领地边框。
-> 
+>
 > **/land enclose setpos1**
-> 
-> 设置框选点1，您需要框选两个点确定圈地的范围。输入此指令自动进入圈地模式。
-> 
-> **/land enclose setpos2** 
-> 
-> 设置框选点2，您需要框选两个点确定圈地的范围。输入此指令自动进入圈地模式。
-> 
+>
+> 设置框选点 1，您需要框选两个点确定圈地的范围。输入此命令自动进入圈地模式。
+>
+> **/land enclose setpos2**
+>
+> 设置框选点 2，您需要框选两个点确定圈地的范围。输入此命令自动进入圈地模式。
+>
 > **/land enclose edit**
-> 
+>
 > 手动输入具体数字修改圈地范围。
-> 
+>
 > **/land enclose cancel**
-> 
+>
 > 退出圈地模式
-> 
+>
 > **/land enclose confirm**
-> 
+>
 > 确认圈地范围，进行圈地。
 
-#### 管理指令
+#### 管理命令
 
 > **/land this**
-> 
+>
 > 管理脚下的领地
-> 
+>
 > **/land dashboard**
-> 
+>
 > 管理员领地选择器
 
-#### 其他指令
+#### 其他命令
 
 > **/land tp**
-> 
+>
 > 进入领地传送
-> 
+>
 > **/land buy**
-> 
+>
 > 购买正在出售的领地
-> 
+>
 > **/land help**
-> 
-> 测试指令，没什么用。
+>
+> 测试命令，没什么用。
 
 ### 圈地教程
 
@@ -197,21 +200,21 @@ if (priceY!==0) {
 
 您可以通过以下模式进入圈地模式：
 
-1. 直接通过指令`/land enclose setpos1/2`选择一点，将自动进入圈地模式.
+1. 直接通过命令`/land enclose setpos1/2`选择一点，将自动进入圈地模式.
 
-2. 通过指令`/land enclose show`手动进入圈地模式，通过此方法进入，**可以恢复上一次未完成圈地的数据**。
+2. 通过命令`/land enclose show`手动进入圈地模式，通过此方法进入，**可以恢复上一次未完成圈地的数据**。
 
 #### 选点
 
-通过指令`/land enclose setpos 1/2`可以选择圈地范围的两个坐标，若您加载了**边缘显示**插件，选择两点后则可看到框选的边框。
+通过命令`/land enclose setpos 1/2`可以选择圈地范围的两个坐标，若您加载了**边缘显示**插件，选择两点后则可看到框选的边框。
 
 ![](screenshots/showEnclose.png)
 
 #### 确认范围
 
-若您想放弃圈地，可执行指令`/land enclose cancel`
+若您想放弃圈地，可执行命令`/land enclose cancel`
 
-若您已经确定了圈地范围，可执行指令`/land enclose comfirm`，继续圈地步骤
+若您已经确定了圈地范围，可执行命令`/land enclose comfirm`，继续圈地步骤
 
 确认范围后，可选择圈地类型
 
@@ -279,8 +282,8 @@ if (priceY!==0) {
 
 - [ ] 玩家领地管理面板
 
-- [ ] 基于Sqlite的领地索引系统
+- [ ] 基于 Sqlite 的领地索引系统
 
-- [x] 从iLand导入领地数据
+- [x] 从 iLand 导入领地数据
 
-- [ ] 从pfes、pfland、land-g7等其他领地插件导入数据
+- [ ] 从 pfes、pfland、land-g7 等其他领地插件导入数据
