@@ -14,7 +14,7 @@
     "enclose.edit.label": "此面板可以对您选定的领地范围进行修正\n若您只想进行2D圈地，不需要修改Y数值",
     "enclose.edit.posA": "点1-",
     "enclose.edit.posB": "点2-",
-    "enclose.edit,nochoose": "尚未选择",
+    "enclose.edit.nochoose": "尚未选择",
     "enclose.edit.posDesp": "请输入合法的坐标数字",
     "enclose.edit.success": "§a坐标修改成功",
     "enclose.edit.errorY": "§eY坐标必须介于-64~319",

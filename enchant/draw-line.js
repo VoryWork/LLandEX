@@ -1,90 +1,6 @@
-const lineType = {
-    px: {
-        plustime: [1, 0, 0, 0],
-        facing: {
-            pz: "c",
-            nz: "d",
-            py: "e",
-            ny: "f",
-        },
-    },
-    py: {
-        plustime: [0, 1, 0, 0],
-        facing: {
-            px: "g",
-            nx: "h",
-            pz: "i",
-            nz: "j",
-        },
-    },
-    pz: {
-        plustime: [0, 0, 1, 0],
-        facing: {
-            ny: "k",
-            py: "l",
-            px: "n",
-            nx: "m",
-        },
-    },
-    nx: {
-        plustime: [-1, 0, 0, 0],
-        facing: {
-            pz: "o",
-            nz: "p",
-            py: "q",
-            ny: "r",
-        },
-    },
-    ny: {
-        plustime: [0, -1, 0, 0],
-        facing: {
-            pz: "o",
-            nz: "p",
-            py: "q",
-            ny: "r",
-        },
-    },
-    nz: {
-        plustime: [0, 0, -1, 0],
-        facing: {
-            ny: "w",
-            py: "x",
-            nx: "y",
-            px: "z",
-        },
-    },
-};
-function drawLine(startPos, direction, facing, length, color) {
-    var drawType = lineType[direction];
-    var senondChar = drawType.facing[facing];
-    var residuelength = length; //剩余要绘制的长度
-    var currentLength = 1024; //最开始绘制的长度
-    var currentPosX = startPos.x;
-    var currentPosY = startPos.y;
-    var currentPosZ = startPos.z; //每次绘制的起点
-    while (residuelength > 0) {
-        if (currentLength > residuelength) {
-            //大于剩余长度，进行除法
-            currentLength = currentLength / 2;
-        } else {
-            mc.spawnParticle(
-                currentPosX,
-                currentPosY,
-                currentPosZ,
-                startPos.dimid,
-                "pf:L" +
-                    senondChar +
-                    String(Math.floor(currentLength)) +
-                    "L" +
-                    color +
-                    "b"
-            ); //绘制粒子
-            residuelength -= currentLength;
-            currentPosX += drawType.plustime[0] * currentLength;
-            currentPosY += drawType.plustime[1] * currentLength;
-            currentPosZ += drawType.plustime[2] * currentLength;
-        }
-    }
+function drawLine(startPos, direction, length, color) {
+    var ps = mc.newParticleSpawner();
+    ps.drawAxialLine(startPos, direction, length, color);
 }
 function drawSurfaceY(
     x,
@@ -95,40 +11,37 @@ function drawSurfaceY(
     dimid,
     color,
     offset = 0.02,
-    facingTop = true,
-    playerPos = null
+    facingTop = true
 ) {
-    if (playerPos === null) {
-        //画四条线
-        drawLine(
-            { x: x - offset, y: y, z: z - offset, dimid: dimid },
-            "px",
-            facingTop ? "py" : "ny",
-            dx,
-            color
-        );
-        drawLine(
-            { x: x - offset, y: y, z: z - offset, dimid: dimid },
-            "pz",
-            facingTop ? "py" : "ny",
-            dz,
-            color
-        );
-        drawLine(
-            { x: x - offset, y: y, z: z + dz + offset, dimid: dimid },
-            "px",
-            facingTop ? "py" : "ny",
-            dx,
-            color
-        );
-        drawLine(
-            { x: x + dx + offset, y: y, z: z - offset, dimid: dimid },
-            "pz",
-            facingTop ? "py" : "ny",
-            dz,
-            color
-        );
-    }
+    //画四条线
+    drawLine(
+        mc.newFloatPos(x - offset, y, z - offset, dimid),
+        Direction.POS_X,
+        facingTop ? Direction.POS_Y : Direction.NEG_Y,
+        dx,
+        color
+    );
+    drawLine(
+        mc.newFloatPos(x - offset, y, z - offset, dimid),
+        Direction.POS_Z,
+        facingTop ? Direction.POS_Y : Direction.NEG_Y,
+        dz,
+        color
+    );
+    drawLine(
+        mc.newFloatPos(x - offset, y, z + dz + offset, dimid),
+        Direction.POS_X,
+        facingTop ? Direction.POS_Y : Direction.NEG_Y,
+        dx,
+        color
+    );
+    drawLine(
+        mc.newFloatPos(x + dx + offset, y, z - offset, dimid),
+        Direction.POS_Z,
+        facingTop ? Direction.POS_Y : Direction.NEG_Y,
+        dz,
+        color
+    );
 }
 function drawSurfaceX(
     y,
@@ -139,40 +52,37 @@ function drawSurfaceX(
     dimid,
     color,
     offset = 0.02,
-    facingEast = true,
-    playerPos = null
+    facingEast = true
 ) {
-    if (playerPos === null) {
-        //画四条线
-        drawLine(
-            { x: x, y: y - offset, z: z - offset, dimid: dimid },
-            "py",
-            facingEast ? "px" : "nx",
-            dy,
-            color
-        );
-        drawLine(
-            { x: x, y: y - offset, z: z - offset, dimid: dimid },
-            "pz",
-            facingEast ? "px" : "nx",
-            dz,
-            color
-        );
-        drawLine(
-            { x: x, y: y - offset, z: z + dz + offset, dimid: dimid },
-            "py",
-            facingEast ? "px" : "nx",
-            dy,
-            color
-        );
-        drawLine(
-            { x: x, y: y + dy + offset, z: z - offset, dimid: dimid },
-            "pz",
-            facingEast ? "px" : "nx",
-            dz,
-            color
-        );
-    }
+    //画四条线
+    drawLine(
+        mc.newFloatPos(x, y - offset, z - offset, dimid),
+        Direction.POS_Y,
+        facingEast ? Direction.POS_X : Direction.NEG_X,
+        dy,
+        color
+    );
+    drawLine(
+        mc.newFloatPos(x, y - offset, z - offset, dimid),
+        Direction.POS_Z,
+        facingEast ? Direction.POS_X : Direction.NEG_X,
+        dz,
+        color
+    );
+    drawLine(
+        mc.newFloatPos(x, y - offset, z + dz + offset, dimid),
+        Direction.POS_Y,
+        facingEast ? Direction.POS_X : Direction.NEG_X,
+        dy,
+        color
+    );
+    drawLine(
+        mc.newFloatPos(x, y + dy + offset, z - offset, dimid),
+        Direction.POS_Z,
+        facingEast ? Direction.POS_X : Direction.NEG_X,
+        dz,
+        color
+    );
 }
 function drawSurfaceZ(
     x,
@@ -183,40 +93,37 @@ function drawSurfaceZ(
     dimid,
     color,
     offset = 0.02,
-    facingSouth = true,
-    playerPos = null
+    facingSouth = true
 ) {
-    if (playerPos === null) {
-        //画四条线
-        drawLine(
-            { x: x - offset, y: y - offset, z: z, dimid: dimid },
-            "px",
-            facingSouth ? "pz" : "nz",
-            dx,
-            color
-        );
-        drawLine(
-            { x: x - offset, y: y - offset, z: z, dimid: dimid },
-            "py",
-            facingSouth ? "pz" : "nz",
-            dy,
-            color
-        );
-        drawLine(
-            { x: x - offset, y: y + dy + offset, z: z, dimid: dimid },
-            "px",
-            facingSouth ? "pz" : "nz",
-            dx,
-            color
-        );
-        drawLine(
-            { x: x + dx + offset, y: y - offset, z: z, dimid: dimid },
-            "py",
-            facingSouth ? "pz" : "nz",
-            dy,
-            color
-        );
-    }
+    //画四条线
+    drawLine(
+        mc.newFloatPos(x - offset, y - offset, z, dimid),
+        Direction.POS_X,
+        facingSouth ? Direction.POS_Z : Direction.NEG_Z,
+        dx,
+        color
+    );
+    drawLine(
+        mc.newFloatPos(x - offset, y - offset, z, dimid),
+        Direction.POS_Y,
+        facingSouth ? Direction.POS_Z : Direction.NEG_Z,
+        dy,
+        color
+    );
+    drawLine(
+        mc.newFloatPos(x - offset, y + dy + offset, z, dimid),
+        Direction.POS_X,
+        facingSouth ? Direction.POS_Z : Direction.NEG_Z,
+        dx,
+        color
+    );
+    drawLine(
+        mc.newFloatPos(x + dx + offset, y - offset, z, dimid),
+        Direction.POS_Y,
+        facingSouth ? Direction.POS_Z : Direction.NEG_Z,
+        dy,
+        color
+    );
 }
 function drawCube(
     x,

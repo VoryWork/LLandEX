@@ -195,7 +195,7 @@ if (!file.exists("./plugins/js_data/landEX/")) {
 const configAPI = {
     data: {
         economy: {
-            useLLmoney: false,
+            type: "llmoney",
             moneyScoreboard: "coin",
             moneyName: "祭点",
         },
@@ -316,10 +316,13 @@ const moneyUni = {
      * @returns {number}
      */
     get(player) {
-        if (configAPI.data.economy.useLLmoney) {
-            return money.get(player.xuid);
-        } else {
-            return player.getScore(configAPI.data.economy.moneyScoreboard);
+        switch (configAPI.data.economy.type) {
+            case "llmoney":
+                return player.getMoney();
+            case "scoreboard":
+                return player.getScore(configAPI.data.economy.moneyScoreboard);
+            case "xplevel":
+                return player.getLevel();
         }
     },
     /**
@@ -333,30 +336,40 @@ const moneyUni = {
             // 钱不够
             return false;
         }
-        if (configAPI.data.economy.useLLmoney) {
-            return money.reduce(player.xuid, count);
-        } else {
-            return player.reduceScore(
-                configAPI.data.economy.moneyScoreboard,
-                count
-            );
-        }
-    },
-    addMoney(xuid, count) {
-        if (configAPI.data.economy.useLLmoney) {
-            return money.add(xuid, count);
-        } else {
-            let player = mc.getPlayer(xuid);
-            if (player) {
-                return player.addScore(
+        switch (configAPI.data.economy.type) {
+            case "llmoney":
+                return player.reduceMoney(count);
+            case "scoreboard":
+                return player.reduceScore(
                     configAPI.data.economy.moneyScoreboard,
                     count
                 );
-            } else {
-                //玩家离线
-                let playerMoney = this.offlineMoney.get(xuid) || 0;
-                return this.offlineMoney.set(xuid, playerMoney + count);
-            }
+            case "xplevel":
+                return player.reduceLevel(count);
+        }
+    },
+    addMoney(xuid, count) {
+        switch (configAPI.data.economy.type) {
+            case "llmoney":
+                return money.add(xuid, count);
+            case "scoreboard":
+            case "xplevel":
+                let player = mc.getPlayer(xuid);
+                if (player) {
+                    switch (configAPI.data.economy.type) {
+                        case "scoreboard":
+                            return player.addScore(
+                                configAPI.data.economy.moneyScoreboard,
+                                count
+                            );
+                        case "xplevel":
+                            return player.addLevel(count);
+                    }
+                } else {
+                    //玩家离线
+                    let playerMoney = this.offlineMoney.get(xuid) || 0;
+                    return this.offlineMoney.set(xuid, playerMoney + count);
+                }
         }
     },
 };
@@ -370,7 +383,7 @@ let enableOrg =
  * @type {boolean}
  */
 let enableDrawLine =
-    configAPI.data.common.useDrawLine && ll.require("draw-line.lxl.js");
+    configAPI.data.common.useDrawLine && ll.require("draw-line.js");
 
 const orgAPI = {
     getOrgNum: ll.import("orgEX_getPlayerOrgNum"),
@@ -1606,7 +1619,7 @@ function getOLandConflict(
 let playerState = {};
 //
 
-const drawCube = lxl.import("xmmppsjs_drawCube");
+const drawCube = ll.import("xmmppsjs_drawCube");
 // 地皮进入离开显示
 
 setInterval(() => {
@@ -1642,10 +1655,10 @@ setInterval(() => {
                     let dim = playerState[player.xuid].enclosure.dim;
                     let posA = playerState[player.xuid].enclosure.posA.length
                         ? String(playerState[player.xuid].enclosure.posA)
-                        : i18n.$t("enclose.edit,nochoose");
+                        : i18n.$t("enclose.edit.nochoose");
                     let posB = playerState[player.xuid].enclosure.posB.length
                         ? String(playerState[player.xuid].enclosure.posB)
-                        : i18n.$t("enclose.edit,nochoose");
+                        : i18n.$t("enclose.edit.nochoose");
                     player.sendText(
                         i18n.$t("alert.buttom.enclosing", [posA, posB, dim]),
                         5
@@ -1658,10 +1671,10 @@ setInterval(() => {
                     let dim = playerState[player.xuid].enclosure.dim;
                     let posA = playerState[player.xuid].enclosure.posA.length
                         ? String(playerState[player.xuid].enclosure.posA)
-                        : i18n.$t("enclose.edit,nochoose");
+                        : i18n.$t("enclose.edit.nochoose");
                     let posB = playerState[player.xuid].enclosure.posB.length
                         ? String(playerState[player.xuid].enclosure.posB)
-                        : i18n.$t("enclose.edit,nochoose");
+                        : i18n.$t("enclose.edit.nochoose");
                     let landData = playerState[player.xuid].editingLand.isOrg
                         ? OlandDataInterface.data[
                               playerState[player.xuid].editingLand.landId
@@ -1715,7 +1728,7 @@ setInterval(() => {
                             landData.range.min_position[2] +
                             1,
                         landData.range.dimid,
-                        "e",
+                        ParticleColor.Yellow,
                         0.04,
                         true
                     );
@@ -1757,7 +1770,7 @@ setInterval(() => {
                             landData.range.min_position[2] +
                             1,
                         landData.range.dimid,
-                        "c",
+                        ParticleColor.Green,
                         0.02,
                         true
                     );
@@ -1830,7 +1843,7 @@ setInterval(() => {
                                 landData.range.min_position[2] +
                                 1,
                             landData.range.dimid,
-                            "e",
+                            ParticleColor.Yellow,
                             0.04,
                             true
                         );
@@ -1874,7 +1887,7 @@ setInterval(() => {
                                 landData.range.min_position[2] +
                                 1,
                             landData.range.dimid,
-                            "c",
+                            ParticleColor.Green,
                             0.02,
                             true
                         );
@@ -1986,7 +1999,7 @@ function CommandEncloseHander(player, action) {
                         posInter.dy + 1,
                         posInter.dz + 1,
                         playerState[player.xuid].enclosure.dim,
-                        "f",
+                        ParticleColor.Red,
                         0.04,
                         true
                     );
@@ -2027,7 +2040,7 @@ function CommandEncloseHander(player, action) {
                         posInter.dy + 1,
                         posInter.dz + 1,
                         playerState[player.xuid].enclosure.dim,
-                        "f",
+                        ParticleColor.Red,
                         0.04,
                         true
                     );
@@ -2062,7 +2075,7 @@ function CommandEncloseHander(player, action) {
                     posInter.dy + 1,
                     posInter.dz + 1,
                     playerState[player.xuid].enclosure.dim,
-                    "f",
+                    ParticleColor.Red,
                     0.04,
                     true
                 );
@@ -2160,7 +2173,7 @@ function CommandEncloseHander(player, action) {
                             posInter.dy + 1,
                             posInter.dz + 1,
                             playerState[player.xuid].enclosure.dim,
-                            "f",
+                            ParticleColor.Red,
                             0.04,
                             true
                         );
@@ -2184,42 +2197,41 @@ function CommandEncloseHander(player, action) {
                 let dim = playerState[player.xuid].enclosure.dim;
                 let posA = playerState[player.xuid].enclosure.posA.length
                     ? String(playerState[player.xuid].enclosure.posA)
-                    : i18n.$t("enclose.edit,nochoose");
+                    : i18n.$t("enclose.edit.nochoose");
                 let posB = playerState[player.xuid].enclosure.posB.length
                     ? String(playerState[player.xuid].enclosure.posB)
-                    : i18n.$t("enclose.edit,nochoose");
+                    : i18n.$t("enclose.edit.nochoose");
                 // 只允许一种圈地模式的情况
                 if (
-                    !configAPI.data.common.allow2D &&
-                    !configAPI.data.common.allow3D
+                    configAPI.data.common.allow2D &&
+                    configAPI.data.common.allow3D
                 ) {
-                    // 傻逼服主俩模式全关了圈个屁地，滚！
+                    player.sendModalForm(
+                        i18n.$t("enclose.confirm.title"),
+                        i18n.$t("enclose.confirm.info", [posA, posB, dim]),
+                        "2D",
+                        "3D",
+                        function (pl, dt) {
+                            if (dt == null) {
+                                return;
+                            }
+                            playerState[player.xuid].enclosure.type2D = !!dt;
+                            playerState[player.xuid].state === "enclosing"
+                                ? SelectEncloseType(pl)
+                                : ReEnclosingScan(pl);
+                        }
+                    );
                 } else if (!configAPI.data.common.allow3D) {
                     playerState[player.xuid].enclosure.type2D = true;
                     playerState[player.xuid].state === "enclosing"
-                        ? SelectEncloseType(pl)
-                        : ReEnclosingScan(pl);
+                        ? SelectEncloseType(player)
+                        : ReEnclosingScan(player);
                 } else if (!configAPI.data.common.allow2D) {
                     playerState[player.xuid].enclosure.type2D = false;
                     playerState[player.xuid].state === "enclosing"
-                        ? SelectEncloseType(pl)
-                        : ReEnclosingScan(pl);
+                        ? SelectEncloseType(player)
+                        : ReEnclosingScan(player);
                 }
-                player.sendModalForm(
-                    i18n.$t("enclose.confirm.title"),
-                    i18n.$t("enclose.confirm.info", [posA, posB, dim]),
-                    "2D",
-                    "3D",
-                    function (pl, dt) {
-                        if (dt == null) {
-                            return;
-                        }
-                        playerState[player.xuid].enclosure.type2D = !!dt;
-                        playerState[player.xuid].state === "enclosing"
-                            ? SelectEncloseType(pl)
-                            : ReEnclosingScan(pl);
-                    }
-                );
             } else {
                 player.tell(i18n.$t("enclose.edit.noEnclosing"));
             }
@@ -2828,17 +2840,19 @@ mc.listen("onServerStarted", function () {
         "show",
         "edit",
     ]);
-    landComm.setEnum("singleAction", ["this", "help", "dashboard", "buy"]);
-    landComm.setEnum("tpEnterance", ["tp"]);
-    landComm.setEnum("tpAction", ["gui", "set", "clear"]);
+    landComm.setEnum("singleAction", ["this", "dashboard", "buy"]);
     landComm.mandatory("action", ParamType.Enum, "encloseEnterance", 1);
     landComm.mandatory("enclose", ParamType.Enum, "encloseAction", 1);
     landComm.mandatory("action", ParamType.Enum, "singleAction", 1);
-    landComm.mandatory("action", ParamType.Enum, "tpEnterance", 1);
-    landComm.optional("tpaction", ParamType.Enum, "tpAction", 1);
     landComm.overload(["encloseEnterance", "encloseAction"]);
-    landComm.overload(["tpEnterance", "tpAction"]);
     landComm.overload(["singleAction"]);
+    if (configAPI.data.common.allowLandTeleport) {
+        landComm.setEnum("tpEnterance", ["tp"]);
+        landComm.setEnum("tpAction", ["gui", "set", "clear"]);
+        landComm.mandatory("action", ParamType.Enum, "tpEnterance", 1);
+        landComm.optional("tpaction", ParamType.Enum, "tpAction", 1);
+        landComm.overload(["tpEnterance", "tpAction"]);
+    }
     landComm.setCallback((_cmd, _ori, out, res) => {
         if (!_ori.player) {
             outp.error(i18n.$t("command.notplayer"));
@@ -2933,7 +2947,11 @@ function ManageLand(player, landId, isOrg = false) {
         "textures/items/name_tag"
     );
     fm.addButton(i18n.$t("manage.main.events"), "textures/items/hopper");
-    fm.addButton(i18n.$t("manage.main.teleport"), "textures/items/ender_eye");
+    if (configAPI.data.common.allowLandTeleport)
+        fm.addButton(
+            i18n.$t("manage.main.teleport"),
+            "textures/items/ender_eye"
+        );
     fm.addButton(
         i18n.$t("manage.main.permission"),
         "textures/items/diamond_sword"
@@ -2956,6 +2974,7 @@ function ManageLand(player, landId, isOrg = false) {
         if (dt == null) {
             return;
         }
+        if (dt > 2 && !configAPI.data.common.allowLandTeleport) dt++;
         switch (dt) {
             case 0:
                 LandInfo(pl, landId, isOrg);
@@ -2967,7 +2986,7 @@ function ManageLand(player, landId, isOrg = false) {
                 LandEventsManage(pl, landId, isOrg);
                 break;
             case 3:
-                LnadTeleportManage(pl, landId, isOrg);
+                LandTeleportManage(pl, landId, isOrg);
                 break;
             case 4:
                 PermissionManageEntry(pl, landId, isOrg);
@@ -3189,7 +3208,7 @@ function LandEventsManage(player, landId, isOrg = false) {
  * @param {string} landId
  * @param {boolean} isOrg
  */
-function LnadTeleportManage(player, landId, isOrg = false) {
+function LandTeleportManage(player, landId, isOrg = false) {
     /**
      * @type {landData}
      */
@@ -3241,7 +3260,7 @@ function LnadTeleportManage(player, landId, isOrg = false) {
                     .setTitle(i18n.$t("manage.teleport.title"))
                     .setContent(i18n.$t("manage.teleport.clearSuccess"));
                 player.sendForm(fm, (pl, dt) => {
-                    LnadTeleportManage(pl, landId, isOrg);
+                    LandTeleportManage(pl, landId, isOrg);
                 });
                 return;
             } else {
@@ -3270,7 +3289,7 @@ function LnadTeleportManage(player, landId, isOrg = false) {
                         .setTitle(i18n.$t("manage.teleport.title"))
                         .setContent(i18n.$t("manage.teleport.clearSuccess"));
                     player.sendForm(fm, (pl, dt) => {
-                        LnadTeleportManage(pl, landId, isOrg);
+                        LandTeleportManage(pl, landId, isOrg);
                     });
                     return;
                 }
@@ -3294,7 +3313,7 @@ function LnadTeleportManage(player, landId, isOrg = false) {
                     .setTitle(i18n.$t("manage.teleport.title"))
                     .setContent(i18n.$t("manage.idf.success"));
                 player.sendForm(fm, (pl, dt) => {
-                    LnadTeleportManage(pl, landId, isOrg);
+                    LandTeleportManage(pl, landId, isOrg);
                 });
                 return;
             }
