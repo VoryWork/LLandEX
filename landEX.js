@@ -227,6 +227,7 @@ const configAPI = {
             allowDimension: [0, 1, 2],
             type2DSquare: [10, 10000],
             type3DVolume: [100, 3840000],
+            maxLands: 16,
         },
         operator: [],
     },
@@ -2268,6 +2269,17 @@ function SelectEncloseType(player) {
     ) {
         // 玩家不是管理员且圈地位置不在允许范围内
         player.tell(i18n.$t("enclose.confirm.dimensionNotAllow"));
+    }
+    if (getLand(player.xuid).length >= configAPI.data.limit.maxLands) {
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("enclose.confirm.countover.title"))
+            .setContent(
+                i18n.$t("enclose.confirm.countover.info", [
+                    configAPI.data.limit.maxLands,
+                ])
+            );
+        player.sendForm(fm, () => {});
     }
     // 大小限制
     if (playerState[player.xuid].enclosure.type2D) {
@@ -6414,6 +6426,17 @@ function ReEnclosingScan(player) {
     ) {
         // 玩家不是管理员且圈地位置不在允许范围内
         player.tell(i18n.$t("enclose.confirm.dimensionNotAllow"));
+    }
+    if (getLand(player.xuid).length >= configAPI.data.limit.maxLands) {
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("enclose.confirm.countover.title"))
+            .setContent(
+                i18n.$t("enclose.confirm.countover.info", [
+                    configAPI.data.limit.maxLands,
+                ])
+            );
+        player.sendForm(fm, () => {});
     }
     // 大小限制
     if (playerState[player.xuid].enclosure.type2D) {

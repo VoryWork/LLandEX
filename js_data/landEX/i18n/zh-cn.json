@@ -25,6 +25,8 @@
     "enclose.confirm.over": "超出范围",
     "enclose.confirm.2D.over": "您框选的范围大小超出限制\n§6：面积：§r%s§6格\n最大限制：§r%s§6格\n最小限制：§r%s§6格",
     "enclose.confirm.3D.over": "您框选的范围大小超出限制\n§6：体积：§r%s§6格\n最大限制：§r%s§6格\n最小限制：§r%s§6格",
+    "enclose.confirm.countover.title": "超出数量",
+    "enclose.confirm.countover.info": "您已到达领地数量限制\n最大限制：§r%s§6",
     "enclose.conflict.title": "领地发送冲突",
     "enclose.conflict.org": "领地发送冲突：\n%s\n类型：公会领地",
     "enclose.conflict.pri": "领地发送冲突：\n%s\n类型：私人领地",
