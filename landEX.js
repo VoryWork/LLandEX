@@ -4860,7 +4860,7 @@ mc.listen("onStepOnPressurePlate", (entity, block) => {
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         if (entity.isPlayer() && OlandDataInterface.inTrust(entity.toPlayer().xuid, landId)) {
-            logger.debug("onUseItem信任放行");
+            logger.debug("onStepOnPressurePlate信任放行");
             //信任成员，放行行为
             return;
         }
