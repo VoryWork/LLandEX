@@ -185,6 +185,7 @@
  * @property {boolean} allowAttackPlayer
  * @property {boolean} allowAttackMobs
  */
+"use strict";
 logger.setTitle("LandEX");
 logger.setConsole(true, 4);
 if (!File.exists("./plugins/js_data/landEX/")) {
@@ -1729,9 +1730,7 @@ setInterval(() => {
                             landData.range.min_position[2] +
                             1,
                         landData.range.dimid,
-                        ParticleColor.Yellow,
-                        0.04,
-                        true
+                        ParticleColor.Yellow
                     );
                 }
                 playerState[player.xuid].inPLand = "";
@@ -1771,9 +1770,7 @@ setInterval(() => {
                             landData.range.min_position[2] +
                             1,
                         landData.range.dimid,
-                        ParticleColor.Green,
-                        0.02,
-                        true
+                        ParticleColor.Green
                     );
                 }
                 if (
@@ -1844,9 +1841,7 @@ setInterval(() => {
                                 landData.range.min_position[2] +
                                 1,
                             landData.range.dimid,
-                            ParticleColor.Yellow,
-                            0.04,
-                            true
+                            ParticleColor.Yellow
                         );
                     }
                     playerState[player.xuid].inOLand = "";
@@ -1888,9 +1883,7 @@ setInterval(() => {
                                 landData.range.min_position[2] +
                                 1,
                             landData.range.dimid,
-                            ParticleColor.Green,
-                            0.02,
-                            true
+                            ParticleColor.Green
                         );
                     }
                     if (
@@ -2000,9 +1993,7 @@ function CommandEncloseHander(player, action) {
                         posInter.dy + 1,
                         posInter.dz + 1,
                         playerState[player.xuid].enclosure.dim,
-                        ParticleColor.Red,
-                        0.04,
-                        true
+                        ParticleColor.Red
                     );
                 }
             }
@@ -2041,9 +2032,7 @@ function CommandEncloseHander(player, action) {
                         posInter.dy + 1,
                         posInter.dz + 1,
                         playerState[player.xuid].enclosure.dim,
-                        ParticleColor.Red,
-                        0.04,
-                        true
+                        ParticleColor.Red
                     );
                 }
             }
@@ -2076,9 +2065,7 @@ function CommandEncloseHander(player, action) {
                     posInter.dy + 1,
                     posInter.dz + 1,
                     playerState[player.xuid].enclosure.dim,
-                    ParticleColor.Red,
-                    0.04,
-                    true
+                    ParticleColor.Red
                 );
             }
             break;
@@ -2174,9 +2161,7 @@ function CommandEncloseHander(player, action) {
                             posInter.dy + 1,
                             posInter.dz + 1,
                             playerState[player.xuid].enclosure.dim,
-                            ParticleColor.Red,
-                            0.04,
-                            true
+                            ParticleColor.Red
                         );
                     }
                 }
@@ -4870,14 +4855,15 @@ mc.listen("onOpenContainer", (player, block) => {
     }
 });
 
-//这玩意貌似没有用
-/**
- * @todo https://github.com/LiteLDev/LiteLoaderBDS/issues/350
- */
 mc.listen("onStepOnPressurePlate", (entity, block) => {
     let pos = block.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
+        if (entity.isPlayer() && OlandDataInterface.inTrust(entity.toPlayer().xuid, landId)) {
+            logger.debug("onUseItem信任放行");
+            //信任成员，放行行为
+            return;
+        }
         let landData = pLandDataInterface.data[landId];
         //踩压力板没什么赦免的
         if (!landData.permissions.redStone.usePressurePlate) {
