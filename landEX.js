@@ -2255,7 +2255,9 @@ function SelectEncloseType(player) {
         // 玩家不是管理员且圈地位置不在允许范围内
         player.tell(i18n.$t("enclose.confirm.dimensionNotAllow"));
     }
-    if (getLand(player.xuid).length >= configAPI.data.limit.maxLands) {
+    if (
+        belongToApi.getLand(player.xuid).length >= configAPI.data.limit.maxLands
+    ) {
         let fm = mc
             .newSimpleForm()
             .setTitle(i18n.$t("enclose.confirm.countover.title"))
@@ -4859,7 +4861,10 @@ mc.listen("onStepOnPressurePlate", (entity, block) => {
     let pos = block.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
-        if (entity.isPlayer() && OlandDataInterface.inTrust(entity.toPlayer().xuid, landId)) {
+        if (
+            entity.isPlayer() &&
+            OlandDataInterface.inTrust(entity.toPlayer().xuid, landId)
+        ) {
             logger.debug("onStepOnPressurePlate信任放行");
             //信任成员，放行行为
             return;
@@ -6413,7 +6418,9 @@ function ReEnclosingScan(player) {
         // 玩家不是管理员且圈地位置不在允许范围内
         player.tell(i18n.$t("enclose.confirm.dimensionNotAllow"));
     }
-    if (getLand(player.xuid).length >= configAPI.data.limit.maxLands) {
+    if (
+        belongToApi.getLand(player.xuid).length >= configAPI.data.limit.maxLands
+    ) {
         let fm = mc
             .newSimpleForm()
             .setTitle(i18n.$t("enclose.confirm.countover.title"))
@@ -7359,8 +7366,7 @@ function UUIDManage(player) {
         ManageLand(pl, LandId, isOrg);
     });
 }
-
-//图片文字制作
-logger.log(
-    "欢迎使用LandEX\n __          ___      .__   __.  _______   __________   ___ \r\n|  |        /   \\     |  \\ |  | |       \\ |   ____\\  \\ /  / \r\n|  |       /  ^  \\    |   \\|  | |  .--.  ||  |__   \\  V  /  \r\n|  |      /  /_\\  \\   |  . `  | |  |  |  ||   __|   >   <   \r\n|  `----./  _____  \\  |  |\\   | |  '--'  ||  |____ /  .  \\  \r\n|_______/__/     \\__\\ |__| \\__| |_______/ |_______/__/ \\__\\ \r\n"
-);
+ll.export((x, y, z, dim, xuid) => {
+    let land = getPLandIdbyPos(x, y, z, dim);
+    return belongToApi.getLand(xuid).includes(land);
+}, "landEX_GetHasPLandPermbyPos");
