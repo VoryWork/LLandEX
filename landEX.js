@@ -387,28 +387,28 @@ let enableOrg =
 let enableDrawLine =
     configAPI.data.common.useDrawLine && ll.require("draw-line.js");
 
-const orgAPI = {
-    getOrgNum: ll.import("orgEX_getPlayerOrgNum"),
-    isOwner: ll.import("orgEX_playerIsOwner"),
-    orgGetMoney: ll.import("orgEX_orgGetMoney"),
-    orgAddMoney: ll.import("orgEX_orgAddMoney"),
-    getOrgName: ll.import("orgEX_getOrgName"),
-};
-orgAPI.getOrgNum;
+if (enableOrg)
+    var orgAPI = {
+        getOrgNum: ll.import("orgEX_getPlayerOrgNum"),
+        isOwner: ll.import("orgEX_playerIsOwner"),
+        orgGetMoney: ll.import("orgEX_orgGetMoney"),
+        orgAddMoney: ll.import("orgEX_orgAddMoney"),
+        getOrgName: ll.import("orgEX_getOrgName"),
+    };
 
 // 领地归属表
 const belongToApi = {
     data: {
         /**
-         * @type {Object<string,string>}
+         * @type {Object<string,Array<string>>}
          */
         player: {},
         /**
-         * @type {Object<string,string>}
+         * @type {Object<string,Array<string>>}
          */
         shared: {},
         /**
-         * @type {Object<string,string>}
+         * @type {Object<string,Array<string>>}
          */
         org: {},
     },
@@ -1344,7 +1344,7 @@ function getPLandIdbyPos(x, y, z, dim) {
             logger.debug("区块索引未命中");
         }
     }
-    // 啥都没有，吧啥都没有这个结果存入缓存
+    // 啥都没有，把啥都没有这个结果存入缓存
     if (configAPI.data.common.enableCache) {
         // 存入缓存
         cache.push(`p:${x},${y},${z},${dim}`, "em");
@@ -1401,7 +1401,7 @@ function getOLandIdbyPos(x, y, z, dim) {
         } else {
         }
     }
-    // 啥都没有，吧啥都没有这个结果存入缓存
+    // 啥都没有，把啥都没有这个结果存入缓存
     if (configAPI.data.common.enableCache) {
         // 存入缓存
         cache.push(
@@ -1499,9 +1499,9 @@ function getPLandinRange(posInterface, dim, type2D = false) {
     // 二维遍历
     for (let chunkX = chunkRange.minX; chunkX < chunkRange.maxX; chunkX++) {
         for (let chunkZ = chunkRange.minZ; chunkZ < chunkRange.maxZ; chunkZ++) {
-            //log(chunkX+":"+chunkZ+":"+dim+type2D)
+            logger.debug(chunkX + ":" + chunkZ + ":" + dim + type2D);
             let chunks = ChunkInterface.getChunks(chunkX, chunkZ, dim, false);
-            //log(chunks)
+            logger.debug(chunks);
             for (const landId of chunks) {
                 if (hasChecked.indexOf(landId) !== -1) {
                     // 这块领地已经检查过在外，不需要再检查
@@ -2075,7 +2075,7 @@ function CommandEncloseHander(player, action) {
                 playerState[player.xuid].enclosure.posA.length === 0 ||
                 playerState[player.xuid].enclosure.posB.length === 0
             ) {
-                // 有一个坐标没有，不允许编辑。
+                // 有一个坐标没有，不允许编辑
                 player.tell(i18n.$t("enclose.edit.noHavePos"));
                 return;
             }
@@ -2176,7 +2176,7 @@ function CommandEncloseHander(player, action) {
                     playerState[player.xuid].enclosure.posA.length === 0 ||
                     playerState[player.xuid].enclosure.posB.length === 0
                 ) {
-                    // 有一个坐标没有，不允许编辑。
+                    // 有一个坐标没有，不允许编辑
                     player.tell(i18n.$t("enclose.confirm.noHavePos"));
                     return;
                 }
@@ -2599,7 +2599,7 @@ function encloseMain(player, posInterface, orgNum = null) {
                 organization: {
                     allowOtherEnclose: false, // 允许任何人圈地
                     allowMemberEnclose: false, // 允许团队里的人圈地
-                    trustMembers: true, // 信任团队成员。（否则只能圈地）
+                    trustMembers: true, // 信任团队成员（否则只能圈地）
                 },
                 blocks: {
                     blockPlace: false, // 允许放置方块
@@ -4032,7 +4032,7 @@ mc.listen(
         logger.debug("onUseItemOn: block" + block.type);
         logger.debug("onUseItemOn item:" + item.type);
 
-        //先要检测land存不存在
+        //先要检测领地存不存在
         /**
          * @type {pos}
          */
@@ -4251,7 +4251,7 @@ mc.listen(
                 itemName.endsWith("trapdoor") &&
                 !landData.permissions.blocks.useTrapdoor
             ) {
-                //活扳门
+                //活板门
                 return false;
             } else if (
                 itemName.endsWith("button") &&
@@ -4499,7 +4499,7 @@ mc.listen(
                 itemName.endsWith("trapdoor") &&
                 !landData.permissions.blocks.useTrapdoor
             ) {
-                //活扳门
+                //活板门
                 return false;
             } else if (
                 itemName.endsWith("button") &&
@@ -4541,7 +4541,7 @@ mc.listen(
      */
     function (player, block) {
         logger.debug("onBlockInteracted:" + block.type);
-        //先要检测land存不存在
+        //先要检测领地存不存在
         /**
          * @type {pos}
          */
@@ -4556,6 +4556,186 @@ mc.listen(
             let landData = pLandDataInterface.data[landId];
             if (pLandDataInterface.inTrust(player.xuid, landId)) {
                 logger.debug("onBlockInteracted信任成员，放行行为");
+                //信任成员，放行行为
+                return;
+            }
+            //对各类实用方块进行判断
+            switch (block.type) {
+                case "minecraft:cartography_table":
+                    if (!landData.permissions.tools.useCartographyTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:smithing_table":
+                    if (!landData.permissions.tools.useSmithingTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:smoker":
+                    if (!landData.permissions.tools.useSmoker) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:furnace":
+                    if (!landData.permissions.tools.useFurnace) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:blast_furnace":
+                    if (!landData.permissions.tools.useBlastFurnace) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:brewing_stand":
+                    if (!landData.permissions.tools.useBrewingStand) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:anvil":
+                    if (!landData.permissions.tools.useAnvil) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:beacon":
+                    if (!landData.permissions.tools.useBeacon) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:enchanting_table":
+                    if (!landData.permissions.tools.useEnchantingTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:grindstone":
+                    if (!landData.permissions.tools.useGrindstone) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:loom":
+                    if (!landData.permissions.tools.useLoom) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:stonecutter_block":
+                    if (!landData.permissions.tools.useStonecutter) {
+                        return false;
+                    }
+                    break;
+                default:
+                    break;
+            }
+            //此项以私人领地为优先
+            return;
+        }
+        //是否禁用团队领地
+        if (!enableOrg) {
+            return;
+        }
+        //没有私人领地，看看公会领地
+        landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+        if (landId) {
+            //领地存在，加载领地数据
+            let landData = OlandDataInterface.data[landId];
+            if (OlandDataInterface.inTrust(player.xuid, landId)) {
+                logger.debug("onBlockInteracted信任成员，放行行为");
+                //信任成员，放行行为
+                return;
+            }
+            //对各类实用方块进行判断
+            switch (block.type) {
+                case "minecraft:cartography_table":
+                    if (!landData.permissions.tools.useCartographyTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:smithing_table":
+                    if (!landData.permissions.tools.useSmithingTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:smoker":
+                    if (!landData.permissions.tools.useSmoker) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:furnace":
+                    if (!landData.permissions.tools.useFurnace) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:blast_furnace":
+                    if (!landData.permissions.tools.useBlastFurnace) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:brewing_stand":
+                    if (!landData.permissions.tools.useBrewingStand) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:anvil":
+                    if (!landData.permissions.tools.useAnvil) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:beacon":
+                    if (!landData.permissions.tools.useBeacon) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:enchanting_table":
+                    if (!landData.permissions.tools.useEnchantingTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:grindstone":
+                    if (!landData.permissions.tools.useGrindstone) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:loom":
+                    if (!landData.permissions.tools.useLoom) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:stonecutter_block":
+                    if (!landData.permissions.tools.useStonecutter) {
+                        return false;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+);
+mc.listen(
+    "onProjectileHitBlock",
+    /**
+     *
+     *
+     * @param {block} block
+     * @param {entity} source
+     */
+    function (block, source) {
+        logger.debug("onProjectileHitBlock:" + block.type);
+        //先要检测领地存不存在
+        /**
+         * @type {pos}
+         */
+        if (!source || !source.isPlayer()) return;
+        const player = source.isPlayer();
+        if (configAPI.data.operator.includes(player.xuid)) {
+            //管理员
+            return;
+        }
+        let pos = block.pos;
+        let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+        if (landId) {
+            //领地存在，加载领地数据
+            let landData = pLandDataInterface.data[landId];
+            if (pLandDataInterface.inTrust(player.xuid, landId)) {
+                logger.debug("onProjectileHitBlock信任成员，放行行为");
                 //信任成员，放行行为
                 return;
             }
@@ -4870,7 +5050,7 @@ mc.listen("onStepOnPressurePlate", (entity, block) => {
             return;
         }
         let landData = pLandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.usePressurePlate) {
             return false;
         }
@@ -4882,7 +5062,7 @@ mc.listen("onStepOnPressurePlate", (entity, block) => {
     landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = OlandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.usePressurePlate) {
             return false;
         }
@@ -4895,7 +5075,7 @@ mc.listen("onHopperSearchItem", (pos, isMinecart) => {
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = pLandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.HopperChange) {
             return false;
         }
@@ -4907,7 +5087,7 @@ mc.listen("onHopperSearchItem", (pos, isMinecart) => {
     landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = OlandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.HopperChange) {
             return false;
         }
@@ -4920,7 +5100,7 @@ mc.listen("onHopperPushOut", (pos) => {
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = pLandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.HopperChange) {
             return false;
         }
@@ -4932,7 +5112,7 @@ mc.listen("onHopperPushOut", (pos) => {
     landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = OlandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.HopperChange) {
             return false;
         }
@@ -5088,7 +5268,7 @@ mc.listen("onTakeItem", (player, entity, item) => {
             return;
         }
         let landData = pLandDataInterface.data[landId];
-        if (!landData.permissions.blocks.itemDrop) {
+        if (!landData.permissions.blocks.itemPickUp) {
             return false;
         }
         return;
@@ -5102,7 +5282,41 @@ mc.listen("onTakeItem", (player, entity, item) => {
             return;
         }
         let landData = OlandDataInterface.data[landId];
-        if (!landData.permissions.blocks.itemDrop) {
+        if (!landData.permissions.blocks.itemPickUp) {
+            return false;
+        }
+        return;
+    }
+});
+
+//获得经验
+mc.listen("onExperienceAdd", (player, exp) => {
+    if (configAPI.data.operator.includes(player.xuid)) {
+        //管理员
+        return;
+    }
+    let pos = player.pos;
+    let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+    if (landId) {
+        if (pLandDataInterface.inTrust(player.xuid, landId)) {
+            return;
+        }
+        let landData = pLandDataInterface.data[landId];
+        if (!landData.permissions.blocks.itemPickUp) {
+            return false;
+        }
+        return;
+    }
+    if (!enableOrg) {
+        return;
+    }
+    landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+    if (landId) {
+        if (OlandDataInterface.inTrust(player.xuid, landId)) {
+            return;
+        }
+        let landData = OlandDataInterface.data[landId];
+        if (!landData.permissions.blocks.itemPickUp) {
             return false;
         }
         return;
@@ -5449,8 +5663,8 @@ mc.listen("onMobHurt", (target, source, damage) => {
         //不是实体造成的伤害
         return;
     }
-    if (source.isPlayer()) {
-        //玩家造成的攻击，这里不拦截
+    if (target.isPlayer()) {
+        //玩家被攻击，这里不拦截
         return;
     }
     let pos = target.pos;
@@ -5515,6 +5729,9 @@ mc.listen("onMobSpawn", (type, pos) => {
         ) {
             return false;
         }
+        if (!configAPI.data.common.defaultSpawn) {
+            return false;
+        }
         return;
     }
     if (!enableOrg) {
@@ -5539,10 +5756,10 @@ mc.listen("onMobSpawn", (type, pos) => {
         ) {
             return false;
         }
+        if (!configAPI.data.common.defaultSpawn) {
+            return false;
+        }
         return;
-    }
-    if (!configAPI.data.common.defaultSpawn) {
-        return false;
     }
 });
 
@@ -5772,7 +5989,7 @@ function CommandTpSetHander(player) {
                         pos.z,
                     ];
                     pLandDataInterface.save();
-                    player.tell(i18n.$t("teleport.set.success"));
+                    pl.tell(i18n.$t("teleport.set.success"));
                 } else {
                     OlandDataInterface.data[oLandId].teleport = [
                         pos.x,
@@ -5780,7 +5997,7 @@ function CommandTpSetHander(player) {
                         pos.z,
                     ];
                     OlandDataInterface.save();
-                    player.tell(i18n.$t("teleport.set.success"));
+                    pl.tell(i18n.$t("teleport.set.success"));
                 }
             }
         );
@@ -5910,7 +6127,7 @@ function CommandTpGuiHander(player) {
             }
         }
     }
-    //构建临时表完成，进行渲染。
+    //构建临时表完成，进行渲染
     let fm = mc.newSimpleForm();
     fm.setTitle(i18n.$t("teleport.gui.title"));
     for (const item of landList) {
@@ -6353,7 +6570,6 @@ function recycleLand(player, landId, isOrg) {
                     //退钱
                     moneyUni.addMoney(landData.settings.owner, price);
                 }
-                //成功提示
                 //成功提示
                 let fm = mc
                     .newSimpleForm()
@@ -7127,7 +7343,7 @@ function landResell(player) {
     );
 }
 
-mc.regConsoleCmd("landex", "公会EX", (args) => {
+mc.regConsoleCmd("landex", "领地EX", (args) => {
     if (!args[0]) {
         log(i18n.$t("console.error"));
         return;
@@ -7245,7 +7461,7 @@ function DashBoardInit(player) {
                             });
                         }
                     }
-                    //构建临时表完成，进行渲染。
+                    //构建临时表完成，进行渲染
                     let fm = mc.newSimpleForm();
                     fm.setTitle(i18n.$t("dashboard.main.title"));
                     for (const item of landList) {
@@ -7320,7 +7536,7 @@ function PlayerNameManage(player, xuid) {
             });
         }
     }
-    //构建临时表完成，进行渲染。
+    //构建临时表完成，进行渲染
     let fm = mc.newSimpleForm();
     fm.setTitle(i18n.$t("dashboard.main.title"));
     for (const item of landList) {
