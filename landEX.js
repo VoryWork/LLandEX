@@ -6318,7 +6318,7 @@ function ExplodeHander(landData, pos, range) {
         return true;
     }
     //定义距离
-    distance = {
+    let distance = {
         nx: landData.range.min_position[0] - pos.x,
         px: pos.x - landData.range.max_position[0],
         nz: landData.range.min_position[2] - pos.z,
