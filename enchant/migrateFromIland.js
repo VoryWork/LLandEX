@@ -1,4 +1,4 @@
-/** 
+/**
  * @typedef {Object} landData -地皮信息
  * @property {Object} range
  * @property {boolean} range.type2D
@@ -209,10 +209,16 @@ const belongToApi = {
      * @returns {boolean}
      */
     playerRemoveShare(xuid, landId) {
-        if (!this.data.shared[xuid] || !this.data.shared[xuid].includes(landId)) {
+        if (
+            !this.data.shared[xuid] ||
+            !this.data.shared[xuid].includes(landId)
+        ) {
             return false;
         }
-        this.data.shared[xuid].splice(!this.data.shared[xuid].indexOf(landId), 1);
+        this.data.shared[xuid].splice(
+            !this.data.shared[xuid].indexOf(landId),
+            1
+        );
         return true;
     },
     /**
@@ -222,10 +228,16 @@ const belongToApi = {
      * @returns {boolean}
      */
     playerRemoveLand(xuid, landId) {
-        if (!this.data.player[xuid] || !this.data.player[xuid].includes(landId)) {
+        if (
+            !this.data.player[xuid] ||
+            !this.data.player[xuid].includes(landId)
+        ) {
             return false;
         }
-        this.data.player[xuid].splice(!this.data.player[xuid].indexOf(landId), 1);
+        this.data.player[xuid].splice(
+            !this.data.player[xuid].indexOf(landId),
+            1
+        );
         return true;
     },
     /**
@@ -263,10 +275,15 @@ const belongToApi = {
         return [];
     },
     save() {
-        file.writeTo("./plugins/js_data/landEX/owner.json", data.toJson(this.data, 4));
+        file.writeTo(
+            "./plugins/js_data/landEX/owner.json",
+            data.toJson(this.data, 4)
+        );
     },
     reload() {
-        this.data = data.parseJson(File.readFrom("./plugins/js_data/landEX/owner.json"));
+        this.data = data.parseJson(
+            File.readFrom("./plugins/js_data/landEX/owner.json")
+        );
     },
 };
 
@@ -282,10 +299,15 @@ const pLandDataInterface = {
      */
     data: {},
     save() {
-        file.writeTo("./plugins/js_data/landEX/priviteLandData.json", data.toJson(this.data, 4));
+        file.writeTo(
+            "./plugins/js_data/landEX/priviteLandData.json",
+            data.toJson(this.data, 4)
+        );
     },
     load() {
-        this.data = data.parseJson(File.readFrom("./plugins/js_data/landEX/priviteLandData.json"));
+        this.data = data.parseJson(
+            File.readFrom("./plugins/js_data/landEX/priviteLandData.json")
+        );
     },
     /**
      *
@@ -307,13 +329,25 @@ const pLandDataInterface = {
         }
         if (landData.range.type2D) {
             // 2D圈地
-            if (x >= landData.range.min_position[0] && x <= landData.range.max_position[0] && z >= landData.range.min_position[2] && z <= landData.range.max_position[2]) {
+            if (
+                x >= landData.range.min_position[0] &&
+                x <= landData.range.max_position[0] &&
+                z >= landData.range.min_position[2] &&
+                z <= landData.range.max_position[2]
+            ) {
                 return true;
             } else {
                 return false;
             }
         } else {
-            if (x >= landData.range.min_position[0] && x <= landData.range.max_position[0] && z >= landData.range.min_position[2] && z <= landData.range.max_position[2] && y >= landData.range.min_position[1] && y <= landData.range.max_position[1]) {
+            if (
+                x >= landData.range.min_position[0] &&
+                x <= landData.range.max_position[0] &&
+                z >= landData.range.min_position[2] &&
+                z <= landData.range.max_position[2] &&
+                y >= landData.range.min_position[1] &&
+                y <= landData.range.max_position[1]
+            ) {
                 return true;
             } else {
                 return false;
@@ -341,18 +375,27 @@ const pLandDataInterface = {
             // 维度不对，肯定不冲突
         }
         // 使用分离轴算法判断是否冲突
-        if (posInterface.maxX < landData.range.min_position[0] || posInterface.minX > landData.range.max_position[0]) {
+        if (
+            posInterface.maxX < landData.range.min_position[0] ||
+            posInterface.minX > landData.range.max_position[0]
+        ) {
             logger.debug("X轴没有冲突");
             return false;
         }
-        if (posInterface.maxZ < landData.range.min_position[2] || posInterface.minZ > landData.range.max_position[2]) {
+        if (
+            posInterface.maxZ < landData.range.min_position[2] ||
+            posInterface.minZ > landData.range.max_position[2]
+        ) {
             logger.debug("Z轴没有冲突");
             return false;
         }
         // 能走到这里，说明X与Z都全冲突了，如果两块圈地其中有一个是2D圈地，那必然重叠
         if (!type2D && !landData.range.type2D) {
             // 俩都是3D领地，加一个3D领地的判断
-            if (posInterface.maxY < landData.range.min_position[1] || posInterface.minY > landData.range.max_position[1]) {
+            if (
+                posInterface.maxY < landData.range.min_position[1] ||
+                posInterface.minY > landData.range.max_position[1]
+            ) {
                 logger.debug("Y轴没有冲突");
                 return false;
             }
@@ -370,7 +413,10 @@ const pLandDataInterface = {
             //领地不存在，放行
             return true;
         }
-        if (this.data[landId].settings.owner === xuid || this.data[landId].share.includes(xuid)) {
+        if (
+            this.data[landId].settings.owner === xuid ||
+            this.data[landId].share.includes(xuid)
+        ) {
             return true;
         } else {
             return false;
@@ -385,12 +431,13 @@ if (file.exists("./plugins/js_data/landEX/priviteLandData.json")) {
 
 const oldLandData = data.parseJson(File.readFrom("./plugins/iland/data.json"));
 
-
 for (const key in oldLandData["Lands"]) {
     const element = oldLandData["Lands"][key];
     pLandDataInterface.data[key] = {
         range: {
-            type2D: (element.range.end_position[1] === 320 && element.range.start_position[1] === -64),
+            type2D:
+                element.range.end_position[1] === 320 &&
+                element.range.start_position[1] === -64,
             min_position: element.range.start_position,
             dimid: element.range.dimid,
             max_position: element.range.end_position,
@@ -401,7 +448,7 @@ for (const key in oldLandData["Lands"]) {
             notifytoOwner: element.settings.signtome,
             drawCube: true,
             describe: element.settings.describe,
-            owner: "",//之后再设置
+            owner: "", //之后再设置
             name: element.settings.nickname,
         },
         share: element.settings.share,
@@ -450,7 +497,7 @@ for (const key in oldLandData["Lands"]) {
                 changeComparator: true,
                 changeRepeater: true,
                 HopperChange: true, // 漏斗
-                pistonPush: element.settings.ev_piston_push
+                pistonPush: element.settings.ev_piston_push,
             },
             tools: {
                 useBell: element.permissions.use_bell,
@@ -491,7 +538,7 @@ for (const key in oldLandData["Lands"]) {
                 allowAttackPlayer: element.permissions.allow_attack_player,
                 allowAttackMobs: element.permissions.allow_attack_mobs,
             },
-        }
+        },
     };
     //添加共享玩家
     for (const xuid of element.settings.share) {
@@ -499,13 +546,15 @@ for (const key in oldLandData["Lands"]) {
     }
 }
 
-const oldBelongtoData = data.parseJson(File.readFrom("./plugins/iland/relationship.json"));
+const oldBelongtoData = data.parseJson(
+    File.readFrom("./plugins/iland/relationship.json")
+);
 for (const key in oldBelongtoData["Owner"]) {
     const landList = oldBelongtoData["Owner"][key];
     for (const landId of landList) {
-        if(pLandDataInterface.data[landId]){
-            pLandDataInterface.data[landId].settings.owner=key;
-            belongToApi.playerAddLand(key,landId);
+        if (pLandDataInterface.data[landId]) {
+            pLandDataInterface.data[landId].settings.owner = key;
+            belongToApi.playerAddLand(key, landId);
         }
     }
 }
@@ -513,4 +562,4 @@ for (const key in oldBelongtoData["Owner"]) {
 logger.error("迁移成功！请重启landEX并删除本文件！");
 pLandDataInterface.save();
 belongToApi.save();
-File.delete(".plugins/js_data/landEX/landIndex.json")
+File.delete(".plugins/js_data/landEX/landIndex.json");

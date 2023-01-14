@@ -1,4 +1,3 @@
-
 /*
 =======================================
                 LandEX
@@ -186,17 +185,18 @@
  * @property {boolean} allowAttackPlayer
  * @property {boolean} allowAttackMobs
  */
+"use strict";
 logger.setTitle("LandEX");
 logger.setConsole(true, 4);
-if (!file.exists("./plugins/js_data/landEX/")) {
+if (!File.exists("./plugins/js_data/landEX/")) {
     log("首次运行，创建文件夹");
-    file.mkdir("./plugins/js_data/landEX/");
+    File.mkdir("./plugins/js_data/landEX/");
 }
 // 初始化领地系统配置
 const configAPI = {
     data: {
         economy: {
-            useLLmoney: false,
+            type: "llmoney",
             moneyScoreboard: "coin",
             moneyName: "祭点",
         },
@@ -228,18 +228,24 @@ const configAPI = {
             allowDimension: [0, 1, 2],
             type2DSquare: [10, 10000],
             type3DVolume: [100, 3840000],
+            maxLands: 16,
         },
         operator: [],
     },
     save() {
-        file.writeTo("./plugins/js_data/landEX/config.json", JSON.stringify(this.data));
+        File.writeTo(
+            "./plugins/js_data/landEX/config.json",
+            JSON.stringify(this.data)
+        );
     },
     reload() {
-        this.data = JSON.parse(File.readFrom("./plugins/js_data/landEX/config.json"));
+        this.data = JSON.parse(
+            File.readFrom("./plugins/js_data/landEX/config.json")
+        );
     },
 };
 // 读取已有的配置文件
-if (file.exists("./plugins/js_data/landEX/config.json")) {
+if (File.exists("./plugins/js_data/landEX/config.json")) {
     configAPI.reload();
 } else {
     configAPI.save();
@@ -270,16 +276,38 @@ const i18n = {
         return output;
     },
     reload() {
-        if (file.exists("./plugins/js_data/landEX/i18n/" + configAPI.data.common.language + ".json")) {
-            i18n.data = data.parseJson(File.readFrom("./plugins/js_data/landEX/i18n/" + configAPI.data.common.language + ".json"));
+        if (
+            File.exists(
+                "./plugins/js_data/landEX/i18n/" +
+                    configAPI.data.common.language +
+                    ".json"
+            )
+        ) {
+            i18n.data = data.parseJson(
+                File.readFrom(
+                    "./plugins/js_data/landEX/i18n/" +
+                        configAPI.data.common.language +
+                        ".json"
+                )
+            );
         }
     },
 };
-if (file.exists("./plugins/js_data/landEX/i18n/" + configAPI.data.common.language + ".json")) {
-    i18n.data = data.parseJson(File.readFrom("./plugins/js_data/landEX/i18n/" + configAPI.data.common.language + ".json"));
+if (
+    File.exists(
+        "./plugins/js_data/landEX/i18n/" +
+            configAPI.data.common.language +
+            ".json"
+    )
+) {
+    i18n.data = data.parseJson(
+        File.readFrom(
+            "./plugins/js_data/landEX/i18n/" +
+                configAPI.data.common.language +
+                ".json"
+        )
+    );
 }
-
-
 
 // 统一的扣款api
 const moneyUni = {
@@ -290,10 +318,13 @@ const moneyUni = {
      * @returns {number}
      */
     get(player) {
-        if (configAPI.data.economy.useLLmoney) {
-            return money.get(player.xuid);
-        } else {
-            return player.getScore(configAPI.data.economy.moneyScoreboard);
+        switch (configAPI.data.economy.type) {
+            case "llmoney":
+                return player.getMoney();
+            case "scoreboard":
+                return player.getScore(configAPI.data.economy.moneyScoreboard);
+            case "xplevel":
+                return player.getLevel();
         }
     },
     /**
@@ -307,24 +338,40 @@ const moneyUni = {
             // 钱不够
             return false;
         }
-        if (configAPI.data.economy.useLLmoney) {
-            return money.reduce(player.xuid, count);
-        } else {
-            return player.reduceScore(configAPI.data.economy.moneyScoreboard, count);
+        switch (configAPI.data.economy.type) {
+            case "llmoney":
+                return player.reduceMoney(count);
+            case "scoreboard":
+                return player.reduceScore(
+                    configAPI.data.economy.moneyScoreboard,
+                    count
+                );
+            case "xplevel":
+                return player.reduceLevel(count);
         }
     },
     addMoney(xuid, count) {
-        if (configAPI.data.economy.useLLmoney) {
-            return money.add(xuid, count);
-        } else {
-            let player = mc.getPlayer(xuid);
-            if (player) {
-                return player.addScore(configAPI.data.economy.moneyScoreboard, count);
-            } else {
-                //玩家离线
-                let playerMoney = this.offlineMoney.get(xuid) || 0;
-                return this.offlineMoney.set(xuid, playerMoney + count);
-            }
+        switch (configAPI.data.economy.type) {
+            case "llmoney":
+                return money.add(xuid, count);
+            case "scoreboard":
+            case "xplevel":
+                let player = mc.getPlayer(xuid);
+                if (player) {
+                    switch (configAPI.data.economy.type) {
+                        case "scoreboard":
+                            return player.addScore(
+                                configAPI.data.economy.moneyScoreboard,
+                                count
+                            );
+                        case "xplevel":
+                            return player.addLevel(count);
+                    }
+                } else {
+                    //玩家离线
+                    let playerMoney = this.offlineMoney.get(xuid) || 0;
+                    return this.offlineMoney.set(xuid, playerMoney + count);
+                }
         }
     },
 };
@@ -332,34 +379,36 @@ const moneyUni = {
 /**
  * @type {boolean}
  */
-let enableOrg = configAPI.data.common.useOrgnization && ll.require("organizationEX.js");
+let enableOrg =
+    configAPI.data.common.useOrgnization && ll.require("organizationEX.js");
 /**
  * @type {boolean}
  */
-let enableDrawLine = configAPI.data.common.useDrawLine && ll.require("draw-line.lxl.js");
+let enableDrawLine =
+    configAPI.data.common.useDrawLine && ll.require("draw-line.js");
 
-const orgAPI = {
-    getOrgNum: ll.import("orgEX_getPlayerOrgNum"),
-    isOwner: ll.import("orgEX_playerIsOwner"),
-    orgGetMoney: ll.import("orgEX_orgGetMoney"),
-    orgAddMoney: ll.import("orgEX_orgAddMoney"),
-    getOrgName: ll.import("orgEX_getOrgName"),
-};
-orgAPI.getOrgNum;
+if (enableOrg)
+    var orgAPI = {
+        getOrgNum: ll.import("orgEX_getPlayerOrgNum"),
+        isOwner: ll.import("orgEX_playerIsOwner"),
+        orgGetMoney: ll.import("orgEX_orgGetMoney"),
+        orgAddMoney: ll.import("orgEX_orgAddMoney"),
+        getOrgName: ll.import("orgEX_getOrgName"),
+    };
 
 // 领地归属表
 const belongToApi = {
     data: {
         /**
-         * @type {Object<string,string>}
+         * @type {Object<string,Array<string>>}
          */
         player: {},
         /**
-         * @type {Object<string,string>}
+         * @type {Object<string,Array<string>>}
          */
         shared: {},
         /**
-         * @type {Object<string,string>}
+         * @type {Object<string,Array<string>>}
          */
         org: {},
     },
@@ -421,10 +470,16 @@ const belongToApi = {
      * @returns {boolean}
      */
     playerRemoveShare(xuid, landId) {
-        if (!this.data.shared[xuid] || !this.data.shared[xuid].includes(landId)) {
+        if (
+            !this.data.shared[xuid] ||
+            !this.data.shared[xuid].includes(landId)
+        ) {
             return false;
         }
-        this.data.shared[xuid].splice(this.data.shared[xuid].indexOf(landId), 1);
+        this.data.shared[xuid].splice(
+            this.data.shared[xuid].indexOf(landId),
+            1
+        );
         return true;
     },
     /**
@@ -434,10 +489,16 @@ const belongToApi = {
      * @returns {boolean}
      */
     playerRemoveLand(xuid, landId) {
-        if (!this.data.player[xuid] || !this.data.player[xuid].includes(landId)) {
+        if (
+            !this.data.player[xuid] ||
+            !this.data.player[xuid].includes(landId)
+        ) {
             return false;
         }
-        this.data.player[xuid].splice(this.data.player[xuid].indexOf(landId), 1);
+        this.data.player[xuid].splice(
+            this.data.player[xuid].indexOf(landId),
+            1
+        );
         return true;
     },
     /**
@@ -475,14 +536,19 @@ const belongToApi = {
         return [];
     },
     save() {
-        file.writeTo("./plugins/js_data/landEX/owner.json", JSON.stringify(this.data));
+        File.writeTo(
+            "./plugins/js_data/landEX/owner.json",
+            JSON.stringify(this.data)
+        );
     },
     reload() {
-        this.data = JSON.parse(File.readFrom("./plugins/js_data/landEX/owner.json"));
+        this.data = JSON.parse(
+            File.readFrom("./plugins/js_data/landEX/owner.json")
+        );
     },
 };
 
-if (file.exists("./plugins/js_data/landEX/owner.json")) {
+if (File.exists("./plugins/js_data/landEX/owner.json")) {
     belongToApi.reload();
 } else {
     belongToApi.save();
@@ -495,10 +561,15 @@ const pLandDataInterface = {
      */
     data: {},
     save() {
-        file.writeTo("./plugins/js_data/landEX/priviteLandData.json", JSON.stringify(this.data));
+        File.writeTo(
+            "./plugins/js_data/landEX/priviteLandData.json",
+            JSON.stringify(this.data)
+        );
     },
     load() {
-        this.data = JSON.parse(File.readFrom("./plugins/js_data/landEX/priviteLandData.json"));
+        this.data = JSON.parse(
+            File.readFrom("./plugins/js_data/landEX/priviteLandData.json")
+        );
     },
     /**
      *
@@ -520,13 +591,25 @@ const pLandDataInterface = {
         }
         if (landData.range.type2D) {
             // 2D圈地
-            if (x >= landData.range.min_position[0] && x <= landData.range.max_position[0] && z >= landData.range.min_position[2] && z <= landData.range.max_position[2]) {
+            if (
+                x >= landData.range.min_position[0] &&
+                x <= landData.range.max_position[0] &&
+                z >= landData.range.min_position[2] &&
+                z <= landData.range.max_position[2]
+            ) {
                 return true;
             } else {
                 return false;
             }
         } else {
-            if (x >= landData.range.min_position[0] && x <= landData.range.max_position[0] && z >= landData.range.min_position[2] && z <= landData.range.max_position[2] && y >= landData.range.min_position[1] && y <= landData.range.max_position[1]) {
+            if (
+                x >= landData.range.min_position[0] &&
+                x <= landData.range.max_position[0] &&
+                z >= landData.range.min_position[2] &&
+                z <= landData.range.max_position[2] &&
+                y >= landData.range.min_position[1] &&
+                y <= landData.range.max_position[1]
+            ) {
                 return true;
             } else {
                 return false;
@@ -554,18 +637,27 @@ const pLandDataInterface = {
             // 维度不对，肯定不冲突
         }
         // 使用分离轴算法判断是否冲突
-        if (posInterface.maxX < landData.range.min_position[0] || posInterface.minX > landData.range.max_position[0]) {
+        if (
+            posInterface.maxX < landData.range.min_position[0] ||
+            posInterface.minX > landData.range.max_position[0]
+        ) {
             logger.debug("X轴没有冲突");
             return false;
         }
-        if (posInterface.maxZ < landData.range.min_position[2] || posInterface.minZ > landData.range.max_position[2]) {
+        if (
+            posInterface.maxZ < landData.range.min_position[2] ||
+            posInterface.minZ > landData.range.max_position[2]
+        ) {
             logger.debug("Z轴没有冲突");
             return false;
         }
         // 能走到这里，说明X与Z都全冲突了，如果两块圈地其中有一个是2D圈地，那必然重叠
         if (!type2D && !landData.range.type2D) {
             // 俩都是3D领地，加一个3D领地的判断
-            if (posInterface.maxY < landData.range.min_position[1] || posInterface.minY > landData.range.max_position[1]) {
+            if (
+                posInterface.maxY < landData.range.min_position[1] ||
+                posInterface.minY > landData.range.max_position[1]
+            ) {
                 logger.debug("Y轴没有冲突");
                 return false;
             }
@@ -583,14 +675,17 @@ const pLandDataInterface = {
             //领地不存在，放行
             return true;
         }
-        if (this.data[landId].settings.owner === xuid || this.data[landId].share.includes(xuid)) {
+        if (
+            this.data[landId].settings.owner === xuid ||
+            this.data[landId].share.includes(xuid)
+        ) {
             return true;
         } else {
             return false;
         }
     },
 };
-if (file.exists("./plugins/js_data/landEX/priviteLandData.json")) {
+if (File.exists("./plugins/js_data/landEX/priviteLandData.json")) {
     pLandDataInterface.load();
 } else {
     pLandDataInterface.save();
@@ -602,10 +697,15 @@ const OlandDataInterface = {
      */
     data: {},
     save() {
-        file.writeTo("./plugins/js_data/landEX/orgLandData.json", JSON.stringify(this.data));
+        File.writeTo(
+            "./plugins/js_data/landEX/orgLandData.json",
+            JSON.stringify(this.data)
+        );
     },
     load() {
-        this.data = JSON.parse(File.readFrom("./plugins/js_data/landEX/orgLandData.json"));
+        this.data = JSON.parse(
+            File.readFrom("./plugins/js_data/landEX/orgLandData.json")
+        );
     },
     /**
      *
@@ -627,13 +727,25 @@ const OlandDataInterface = {
         }
         if (landData.range.type2D) {
             // 2D圈地
-            if (x >= landData.range.min_position[0] && x <= landData.range.max_position[0] && z >= landData.range.min_position[2] && z <= landData.range.max_position[2]) {
+            if (
+                x >= landData.range.min_position[0] &&
+                x <= landData.range.max_position[0] &&
+                z >= landData.range.min_position[2] &&
+                z <= landData.range.max_position[2]
+            ) {
                 return true;
             } else {
                 return false;
             }
         } else {
-            if (x >= landData.range.min_position[0] && x <= landData.range.max_position[0] && z >= landData.range.min_position[2] && z <= landData.range.max_position[2] && y >= landData.range.min_position[1] && y <= landData.range.max_position[1]) {
+            if (
+                x >= landData.range.min_position[0] &&
+                x <= landData.range.max_position[0] &&
+                z >= landData.range.min_position[2] &&
+                z <= landData.range.max_position[2] &&
+                y >= landData.range.min_position[1] &&
+                y <= landData.range.max_position[1]
+            ) {
                 return true;
             } else {
                 return false;
@@ -661,18 +773,27 @@ const OlandDataInterface = {
             // 维度不对，肯定不冲突
         }
         // 使用分离轴算法判断是否冲突
-        if (posInterface.maxX < landData.range.min_position[0] || posInterface.minX > landData.range.max_position[0]) {
+        if (
+            posInterface.maxX < landData.range.min_position[0] ||
+            posInterface.minX > landData.range.max_position[0]
+        ) {
             logger.debug("X轴没有冲突");
             return false;
         }
-        if (posInterface.maxZ < landData.range.min_position[2] || posInterface.minZ > landData.range.max_position[2]) {
+        if (
+            posInterface.maxZ < landData.range.min_position[2] ||
+            posInterface.minZ > landData.range.max_position[2]
+        ) {
             logger.debug("Z轴没有冲突");
             return false;
         }
         // 能走到这里，说明X与Z都全冲突了，如果两块圈地其中有一个是2D圈地，那必然重叠
         if (!type2D && !landData.range.type2D) {
             // 俩都是3D领地，加一个3D领地的判断
-            if (posInterface.maxY < landData.range.min_position[1] || posInterface.minY > landData.range.max_position[1]) {
+            if (
+                posInterface.maxY < landData.range.min_position[1] ||
+                posInterface.minY > landData.range.max_position[1]
+            ) {
                 logger.debug("Y轴没有冲突");
                 return false;
             }
@@ -708,7 +829,7 @@ const OlandDataInterface = {
     },
 };
 
-if (file.exists("./plugins/js_data/landEX/orgLandData.json")) {
+if (File.exists("./plugins/js_data/landEX/orgLandData.json")) {
     OlandDataInterface.load();
 } else {
     OlandDataInterface.save();
@@ -722,7 +843,9 @@ const ChunkInterface = {
     },
     load() {
         logger.log("加载缓存的索引表...");
-        this.data = JSON.parse(File.readFrom("./plugins/js_data/landEX/landIndex.json"));
+        this.data = JSON.parse(
+            File.readFrom("./plugins/js_data/landEX/landIndex.json")
+        );
     },
     reload() {
         logger.log("正在构建索引表...");
@@ -742,18 +865,35 @@ const ChunkInterface = {
                 };
 
                 // 二维遍历
-                for (let chunkX = chunkRange.minX; chunkX < chunkRange.maxX; chunkX++) {
+                for (
+                    let chunkX = chunkRange.minX;
+                    chunkX < chunkRange.maxX;
+                    chunkX++
+                ) {
                     if (!this.data.private[range.dimid]["C" + String(chunkX)]) {
                         // 不存在相关X区块记录，创建
-                        this.data.private[range.dimid]["C" + String(chunkX)] = {};
+                        this.data.private[range.dimid]["C" + String(chunkX)] =
+                            {};
                     }
-                    for (let chunkZ = chunkRange.minZ; chunkZ < chunkRange.maxZ; chunkZ++) {
-                        if (!this.data.private[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)]) {
+                    for (
+                        let chunkZ = chunkRange.minZ;
+                        chunkZ < chunkRange.maxZ;
+                        chunkZ++
+                    ) {
+                        if (
+                            !this.data.private[range.dimid][
+                                "C" + String(chunkX)
+                            ]["C" + String(chunkZ)]
+                        ) {
                             // 不存在相关Z区块记录，创建
-                            this.data.private[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)] = [];
+                            this.data.private[range.dimid][
+                                "C" + String(chunkX)
+                            ]["C" + String(chunkZ)] = [];
                         }
                         // 加入data
-                        this.data.private[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)].push(key);
+                        this.data.private[range.dimid]["C" + String(chunkX)][
+                            "C" + String(chunkZ)
+                        ].push(key);
                         count++;
                     }
                 }
@@ -772,18 +912,40 @@ const ChunkInterface = {
                     maxZ: Math.floor(range.max_position[2] / 16 + 1),
                 };
                 // 二维遍历
-                for (let chunkX = chunkRange.minX; chunkX < chunkRange.maxX; chunkX++) {
-                    if (!this.data.organization[range.dimid]["C" + String(chunkX)]) {
+                for (
+                    let chunkX = chunkRange.minX;
+                    chunkX < chunkRange.maxX;
+                    chunkX++
+                ) {
+                    if (
+                        !this.data.organization[range.dimid][
+                            "C" + String(chunkX)
+                        ]
+                    ) {
                         // 不存在相关X区块记录，创建
-                        this.data.organization[range.dimid]["C" + String(chunkX)] = {};
+                        this.data.organization[range.dimid][
+                            "C" + String(chunkX)
+                        ] = {};
                     }
-                    for (let chunkZ = chunkRange.minZ; chunkZ < chunkRange.maxZ; chunkZ++) {
-                        if (!this.data.organization[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)]) {
+                    for (
+                        let chunkZ = chunkRange.minZ;
+                        chunkZ < chunkRange.maxZ;
+                        chunkZ++
+                    ) {
+                        if (
+                            !this.data.organization[range.dimid][
+                                "C" + String(chunkX)
+                            ]["C" + String(chunkZ)]
+                        ) {
                             // 不存在相关Z区块记录，创建
-                            this.data.organization[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)] = [];
+                            this.data.organization[range.dimid][
+                                "C" + String(chunkX)
+                            ]["C" + String(chunkZ)] = [];
                         }
                         // 加入data
-                        this.data.organization[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)].push(key);
+                        this.data.organization[range.dimid][
+                            "C" + String(chunkX)
+                        ]["C" + String(chunkZ)].push(key);
                         count++;
                     }
                 }
@@ -792,7 +954,10 @@ const ChunkInterface = {
         logger.log("索引构建完成，共产生" + count + "条数据。");
     },
     save() {
-        file.writeTo("./plugins/js_data/landEX/landIndex.json", JSON.stringify(this.data));
+        File.writeTo(
+            "./plugins/js_data/landEX/landIndex.json",
+            JSON.stringify(this.data)
+        );
     },
     /**
      *
@@ -818,23 +983,44 @@ const ChunkInterface = {
                 // 不存在相关X区块记录，跳过
                 continue;
             }
-            for (let chunkZ = chunkRange.minZ; chunkZ < chunkRange.maxZ; chunkZ++) {
-                if (!this.data.private[dimid]["C" + String(chunkX)]["C" + String(chunkZ)]) {
+            for (
+                let chunkZ = chunkRange.minZ;
+                chunkZ < chunkRange.maxZ;
+                chunkZ++
+            ) {
+                if (
+                    !this.data.private[dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ]
+                ) {
                     // 不存在相关Z区块记录，跳过
                     continue;
                 }
                 // 看看有没有
-                let index = this.data.private[dimid]["C" + String(chunkX)]["C" + String(chunkZ)].indexOf(landId);
+                let index =
+                    this.data.private[dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ].indexOf(landId);
                 if (index !== -1) {
-                    this.data.private[dimid]["C" + String(chunkX)]["C" + String(chunkZ)].splice(index, 1);
+                    this.data.private[dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ].splice(index, 1);
                 }
                 // 处理空数组
-                if (this.data.private[dimid]["C" + String(chunkX)]["C" + String(chunkZ)].length === 0) {
-                    delete this.data.private[dimid]["C" + String(chunkX)]["C" + String(chunkZ)];
+                if (
+                    this.data.private[dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ].length === 0
+                ) {
+                    delete this.data.private[dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ];
                 }
-
             }
-            if (Object.keys(this.data.private[dimid]["C" + String(chunkX)]).length === 0) {
+            if (
+                Object.keys(this.data.private[dimid]["C" + String(chunkX)])
+                    .length === 0
+            ) {
                 delete this.data.private[dimid]["C" + String(chunkX)];
             }
         }
@@ -863,22 +1049,44 @@ const ChunkInterface = {
                 // 不存在相关X区块记录，跳过
                 continue;
             }
-            for (let chunkZ = chunkRange.minZ; chunkZ < chunkRange.maxZ; chunkZ++) {
-                if (!this.data.organization[dimid]["C" + String(chunkX)]["C" + String(chunkZ)]) {
+            for (
+                let chunkZ = chunkRange.minZ;
+                chunkZ < chunkRange.maxZ;
+                chunkZ++
+            ) {
+                if (
+                    !this.data.organization[dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ]
+                ) {
                     // 不存在相关Z区块记录，跳过
                     continue;
                 }
                 // 看看有没有
-                let index = this.data.organization[dimid]["C" + String(chunkX)]["C" + String(chunkZ)].indexOf(landId);
+                let index =
+                    this.data.organization[dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ].indexOf(landId);
                 if (index !== -1) {
-                    this.data.organization[dimid]["C" + String(chunkX)]["C" + String(chunkZ)].splice(index, 1);
+                    this.data.organization[dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ].splice(index, 1);
                 }
                 // 处理空数组
-                if (this.data.organization[dimid]["C" + String(chunkX)]["C" + String(chunkZ)].length === 0) {
-                    delete this.data.organization[dimid]["C" + String(chunkX)]["C" + String(chunkZ)];
+                if (
+                    this.data.organization[dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ].length === 0
+                ) {
+                    delete this.data.organization[dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ];
                 }
             }
-            if (Object.keys(this.data.organization[dimid]["C" + String(chunkX)]).length === 0) {
+            if (
+                Object.keys(this.data.organization[dimid]["C" + String(chunkX)])
+                    .length === 0
+            ) {
                 delete this.data.organization[dimid]["C" + String(chunkX)];
             }
         }
@@ -907,13 +1115,25 @@ const ChunkInterface = {
                 // 不存在相关X区块记录，创建
                 this.data.private[range.dimid]["C" + String(chunkX)] = {};
             }
-            for (let chunkZ = chunkRange.minZ; chunkZ < chunkRange.maxZ; chunkZ++) {
-                if (!this.data.private[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)]) {
+            for (
+                let chunkZ = chunkRange.minZ;
+                chunkZ < chunkRange.maxZ;
+                chunkZ++
+            ) {
+                if (
+                    !this.data.private[range.dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ]
+                ) {
                     // 不存在相关Z区块记录，创建
-                    this.data.private[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)] = [];
+                    this.data.private[range.dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ] = [];
                 }
                 // 加入data
-                this.data.private[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)].push(landId);
+                this.data.private[range.dimid]["C" + String(chunkX)][
+                    "C" + String(chunkZ)
+                ].push(landId);
             }
         }
     },
@@ -941,13 +1161,25 @@ const ChunkInterface = {
                 // 不存在相关X区块记录，创建
                 this.data.organization[range.dimid]["C" + String(chunkX)] = {};
             }
-            for (let chunkZ = chunkRange.minZ; chunkZ < chunkRange.maxZ; chunkZ++) {
-                if (!this.data.organization[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)]) {
+            for (
+                let chunkZ = chunkRange.minZ;
+                chunkZ < chunkRange.maxZ;
+                chunkZ++
+            ) {
+                if (
+                    !this.data.organization[range.dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ]
+                ) {
                     // 不存在相关Z区块记录，创建
-                    this.data.organization[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)] = [];
+                    this.data.organization[range.dimid]["C" + String(chunkX)][
+                        "C" + String(chunkZ)
+                    ] = [];
                 }
                 // 加入data
-                this.data.organization[range.dimid]["C" + String(chunkX)]["C" + String(chunkZ)].push(landId);
+                this.data.organization[range.dimid]["C" + String(chunkX)][
+                    "C" + String(chunkZ)
+                ].push(landId);
             }
         }
     },
@@ -964,11 +1196,21 @@ const ChunkInterface = {
         let chunkX = Math.floor(x / 16);
         let chunkZ = Math.floor(z / 16);
         logger.debug("尝试以下索引：" + chunkX + "," + chunkZ + "," + dim);
-        if (!this.data[org ? "organization" : "private"][dim] || !this.data[org ? "organization" : "private"][dim]["C" + String(chunkX)] || !this.data[org ? "organization" : "private"][dim]["C" + String(chunkX)]["C" + String(chunkZ)]) {
+        if (
+            !this.data[org ? "organization" : "private"][dim] ||
+            !this.data[org ? "organization" : "private"][dim][
+                "C" + String(chunkX)
+            ] ||
+            !this.data[org ? "organization" : "private"][dim][
+                "C" + String(chunkX)
+            ]["C" + String(chunkZ)]
+        ) {
             logger.debug("索引没有建立，此区块中没有领地");
             return [];
         } else {
-            return this.data[org ? "organization" : "private"][dim]["C" + String(chunkX)]["C" + String(chunkZ)];
+            return this.data[org ? "organization" : "private"][dim][
+                "C" + String(chunkX)
+            ]["C" + String(chunkZ)];
         }
     },
     /**
@@ -982,17 +1224,27 @@ const ChunkInterface = {
     getChunks(chunkX, chunkZ, dim, org = false) {
         // 获取区块内所有领地
         logger.debug("尝试以下索引：" + chunkX + "," + chunkZ + "," + dim);
-        if (!this.data[org ? "organization" : "private"][dim] || !this.data[org ? "organization" : "private"][dim]["C" + String(chunkX)] || !this.data[org ? "organization" : "private"][dim]["C" + String(chunkX)]["C" + String(chunkZ)]) {
+        if (
+            !this.data[org ? "organization" : "private"][dim] ||
+            !this.data[org ? "organization" : "private"][dim][
+                "C" + String(chunkX)
+            ] ||
+            !this.data[org ? "organization" : "private"][dim][
+                "C" + String(chunkX)
+            ]["C" + String(chunkZ)]
+        ) {
             logger.debug("索引没有建立，此区块中没有领地");
             return [];
         } else {
-            return this.data[org ? "organization" : "private"][dim]["C" + String(chunkX)]["C" + String(chunkZ)];
+            return this.data[org ? "organization" : "private"][dim][
+                "C" + String(chunkX)
+            ]["C" + String(chunkZ)];
         }
     },
 };
 if (!configAPI.data.common.enableCache) {
     ChunkInterface.reload();
-} else if (file.exists("./plugins/js_data/landEX/landIndex.json")) {
+} else if (File.exists("./plugins/js_data/landEX/landIndex.json")) {
     ChunkInterface.load();
 } else {
     ChunkInterface.reload();
@@ -1054,7 +1306,9 @@ const cache = {
 function getPLandIdbyPos(x, y, z, dim) {
     if (configAPI.data.common.enableCache) {
         // 如果有缓存，不妨试一试
-        let result = cache.try(`p:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`);
+        let result = cache.try(
+            `p:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`
+        );
         if (result === "em") {
             logger.debug("缓存命中:空");
             return null;
@@ -1068,18 +1322,29 @@ function getPLandIdbyPos(x, y, z, dim) {
     }
     let possibleLand = ChunkInterface.getChunksLand(x, z, dim, false);
     for (const item of possibleLand) {
-        if (pLandDataInterface.isPosInLand(parseInt(x), parseInt(y), parseInt(z), dim, item)) {
+        if (
+            pLandDataInterface.isPosInLand(
+                parseInt(x),
+                parseInt(y),
+                parseInt(z),
+                dim,
+                item
+            )
+        ) {
             logger.debug("区块索引命中：" + item);
             if (configAPI.data.common.enableCache) {
                 // 存入缓存
-                cache.push(`p:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`, item);
+                cache.push(
+                    `p:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`,
+                    item
+                );
                 return item;
             }
         } else {
             logger.debug("区块索引未命中");
         }
     }
-    // 啥都没有，吧啥都没有这个结果存入缓存
+    // 啥都没有，把啥都没有这个结果存入缓存
     if (configAPI.data.common.enableCache) {
         // 存入缓存
         cache.push(`p:${x},${y},${z},${dim}`, "em");
@@ -1099,7 +1364,9 @@ function getOLandIdbyPos(x, y, z, dim) {
     // 前面的区域以后再来探索吧
     if (configAPI.data.common.enableCache) {
         // 如果有缓存，不妨试一试
-        let result = cache.try(`o:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`);
+        let result = cache.try(
+            `o:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`
+        );
         if (result === "em") {
             logger.debug("缓存命中:空");
             return null;
@@ -1113,20 +1380,34 @@ function getOLandIdbyPos(x, y, z, dim) {
     }
     let possibleLand = ChunkInterface.getChunksLand(x, z, dim, true);
     for (const item of possibleLand) {
-        if (OlandDataInterface.isPosInLand(parseInt(x), parseInt(y), parseInt(z), dim, item)) {
+        if (
+            OlandDataInterface.isPosInLand(
+                parseInt(x),
+                parseInt(y),
+                parseInt(z),
+                dim,
+                item
+            )
+        ) {
             logger.debug("区块索引命中：" + item);
             if (configAPI.data.common.enableCache) {
                 // 存入缓存
-                cache.push(`o:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`, item);
+                cache.push(
+                    `o:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`,
+                    item
+                );
                 return item;
             }
         } else {
         }
     }
-    // 啥都没有，吧啥都没有这个结果存入缓存
+    // 啥都没有，把啥都没有这个结果存入缓存
     if (configAPI.data.common.enableCache) {
         // 存入缓存
-        cache.push(`o:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`, "em");
+        cache.push(
+            `o:${parseInt(x)},${parseInt(y)},${parseInt(z)},${dim}`,
+            "em"
+        );
         return null;
     }
     return null;
@@ -1176,7 +1457,14 @@ function getPLandConflict(posInterface, dim, type2D = false, hasChecked = []) {
                     // 这块领地已经检查过合格，不需要再检查
                     continue;
                 }
-                if (pLandDataInterface.isRangeInLand(posInterface, dim, type2D, landId)) {
+                if (
+                    pLandDataInterface.isRangeInLand(
+                        posInterface,
+                        dim,
+                        type2D,
+                        landId
+                    )
+                ) {
                     // 找到冲突！
                     logger.debug("冲突：" + landId);
                     return landId;
@@ -1189,7 +1477,7 @@ function getPLandConflict(posInterface, dim, type2D = false, hasChecked = []) {
         }
     }
     return null;
-};
+}
 
 /**
  * 私人领地范围检查
@@ -1211,9 +1499,9 @@ function getPLandinRange(posInterface, dim, type2D = false) {
     // 二维遍历
     for (let chunkX = chunkRange.minX; chunkX < chunkRange.maxX; chunkX++) {
         for (let chunkZ = chunkRange.minZ; chunkZ < chunkRange.maxZ; chunkZ++) {
-            //log(chunkX+":"+chunkZ+":"+dim+type2D)
+            logger.debug(chunkX + ":" + chunkZ + ":" + dim + type2D);
             let chunks = ChunkInterface.getChunks(chunkX, chunkZ, dim, false);
-            //log(chunks)
+            logger.debug(chunks);
             for (const landId of chunks) {
                 if (hasChecked.indexOf(landId) !== -1) {
                     // 这块领地已经检查过在外，不需要再检查
@@ -1223,7 +1511,14 @@ function getPLandinRange(posInterface, dim, type2D = false) {
                     // 这块领地已经检查过在里，不需要再检查
                     continue;
                 }
-                if (pLandDataInterface.isRangeInLand(posInterface, dim, type2D, landId)) {
+                if (
+                    pLandDataInterface.isRangeInLand(
+                        posInterface,
+                        dim,
+                        type2D,
+                        landId
+                    )
+                ) {
                     // 找到冲突！
                     logger.debug("在内部：" + landId);
                     insideLand.push(landId);
@@ -1248,7 +1543,14 @@ function getPLandinRange(posInterface, dim, type2D = false) {
  * @param {boolean} typeOrg
  * @returns {string|null}
  */
-function getOLandConflict(posInterface, dim, type2D = false, hasChecked = [], player, typeOrg = false) {
+function getOLandConflict(
+    posInterface,
+    dim,
+    type2D = false,
+    hasChecked = [],
+    player,
+    typeOrg = false
+) {
     const chunkRange = {
         minX: Math.floor(posInterface.minX / 16 - 1),
         minZ: Math.floor(posInterface.minZ / 16 - 1),
@@ -1263,7 +1565,14 @@ function getOLandConflict(posInterface, dim, type2D = false, hasChecked = [], pl
                 if (hasChecked.indexOf(landId) !== -1) {
                     // 这块领地已经检查过合格，不需要再检查
                     continue;
-                } else if (!OlandDataInterface.isRangeInLand(posInterface, dim, type2D, landId)) {
+                } else if (
+                    !OlandDataInterface.isRangeInLand(
+                        posInterface,
+                        dim,
+                        type2D,
+                        landId
+                    )
+                ) {
                     // 没有冲突
                     hasChecked.push(landId);
                     logger.debug("[没有冲突]");
@@ -1280,8 +1589,14 @@ function getOLandConflict(posInterface, dim, type2D = false, hasChecked = [], pl
                         logger.debug("[有冲突]但此领地允许任何人圈地");
                         hasChecked.push(landId);
                         continue;
-                    } else if (landData.permissions.organization.allowMemberEnclose && landData.settings.owner === orgAPI.getOrgNum(player.xuid)) {
-                        logger.debug("[有冲突]但此领地允许玩家圈地且玩家是本公会的人");
+                    } else if (
+                        landData.permissions.organization.allowMemberEnclose &&
+                        landData.settings.owner ===
+                            orgAPI.getOrgNum(player.xuid)
+                    ) {
+                        logger.debug(
+                            "[有冲突]但此领地允许玩家圈地且玩家是本公会的人"
+                        );
                         hasChecked.push(landId);
                         continue;
                     } else if (orgAPI.isOwner(player.xuid)) {
@@ -1306,7 +1621,7 @@ function getOLandConflict(posInterface, dim, type2D = false, hasChecked = [], pl
 let playerState = {};
 //
 
-const drawCube = lxl.import("xmmppsjs_drawCube");
+const drawCube = ll.import("xmmppsjs_drawCube");
 // 地皮进入离开显示
 
 setInterval(() => {
@@ -1336,22 +1651,48 @@ setInterval(() => {
         }
         // 特殊状态特殊处理
         switch (playerState[player.xuid].state) {
-            case "enclosing": {
-                // 圈地状态
-                let dim = playerState[player.xuid].enclosure.dim;
-                let posA = playerState[player.xuid].enclosure.posA.length ? String(playerState[player.xuid].enclosure.posA) : i18n.$t("enclose.edit,nochoose");
-                let posB = playerState[player.xuid].enclosure.posB.length ? String(playerState[player.xuid].enclosure.posB) : i18n.$t("enclose.edit,nochoose");
-                player.sendText(i18n.$t("alert.buttom.enclosing", [posA, posB, dim]), 5);
-            }
+            case "enclosing":
+                {
+                    // 圈地状态
+                    let dim = playerState[player.xuid].enclosure.dim;
+                    let posA = playerState[player.xuid].enclosure.posA.length
+                        ? String(playerState[player.xuid].enclosure.posA)
+                        : i18n.$t("enclose.edit.nochoose");
+                    let posB = playerState[player.xuid].enclosure.posB.length
+                        ? String(playerState[player.xuid].enclosure.posB)
+                        : i18n.$t("enclose.edit.nochoose");
+                    player.sendText(
+                        i18n.$t("alert.buttom.enclosing", [posA, posB, dim]),
+                        5
+                    );
+                }
                 return;
-            case "reEnclosing": {
-                // 重新圈地状态
-                let dim = playerState[player.xuid].enclosure.dim;
-                let posA = playerState[player.xuid].enclosure.posA.length ? String(playerState[player.xuid].enclosure.posA) : i18n.$t("enclose.edit,nochoose");
-                let posB = playerState[player.xuid].enclosure.posB.length ? String(playerState[player.xuid].enclosure.posB) : i18n.$t("enclose.edit,nochoose");
-                let landData = playerState[player.xuid].editingLand.isOrg ? OlandDataInterface.data[playerState[player.xuid].editingLand.landId] : pLandDataInterface.data[playerState[player.xuid].editingLand.landId];
-                player.sendText(i18n.$t("alert.buttom.reEnclosing", [landData.settings.name, posA, posB]), 5);
-            }
+            case "reEnclosing":
+                {
+                    // 重新圈地状态
+                    let dim = playerState[player.xuid].enclosure.dim;
+                    let posA = playerState[player.xuid].enclosure.posA.length
+                        ? String(playerState[player.xuid].enclosure.posA)
+                        : i18n.$t("enclose.edit.nochoose");
+                    let posB = playerState[player.xuid].enclosure.posB.length
+                        ? String(playerState[player.xuid].enclosure.posB)
+                        : i18n.$t("enclose.edit.nochoose");
+                    let landData = playerState[player.xuid].editingLand.isOrg
+                        ? OlandDataInterface.data[
+                              playerState[player.xuid].editingLand.landId
+                          ]
+                        : pLandDataInterface.data[
+                              playerState[player.xuid].editingLand.landId
+                          ];
+                    player.sendText(
+                        i18n.$t("alert.buttom.reEnclosing", [
+                            landData.settings.name,
+                            posA,
+                            posB,
+                        ]),
+                        5
+                    );
+                }
                 return;
             default:
                 break;
@@ -1361,14 +1702,36 @@ setInterval(() => {
         if (!result) {
             if (playerState[player.xuid].inPLand !== "") {
                 // 离开私人领地
-                let landData = pLandDataInterface.data[playerState[player.xuid].inPLand];
-                if (playerState[player.xuid].state === "playing" && landData.settings.notifyItemBar) {
+                let landData =
+                    pLandDataInterface.data[playerState[player.xuid].inPLand];
+                if (
+                    playerState[player.xuid].state === "playing" &&
+                    landData.settings.notifyItemBar
+                ) {
                     // 离开领地提示
-                    player.sendText(i18n.$t("alert.buttom.leave", [landData.settings.name]), 5);
+                    player.sendText(
+                        i18n.$t("alert.buttom.leave", [landData.settings.name]),
+                        5
+                    );
                 }
                 if (enableDrawLine && landData.settings.drawCube) {
                     // 画线
-                    drawCube(landData.range.min_position[0], landData.range.min_position[1], landData.range.min_position[2], landData.range.max_position[0] - landData.range.min_position[0] + 1, landData.range.max_position[1] - landData.range.min_position[1] + 1, landData.range.max_position[2] - landData.range.min_position[2] + 1, landData.range.dimid, "e", 0.04, true);
+                    drawCube(
+                        landData.range.min_position[0],
+                        landData.range.min_position[1],
+                        landData.range.min_position[2],
+                        landData.range.max_position[0] -
+                            landData.range.min_position[0] +
+                            1,
+                        landData.range.max_position[1] -
+                            landData.range.min_position[1] +
+                            1,
+                        landData.range.max_position[2] -
+                            landData.range.min_position[2] +
+                            1,
+                        landData.range.dimid,
+                        ParticleColor.Yellow
+                    );
                 }
                 playerState[player.xuid].inPLand = "";
             }
@@ -1386,21 +1749,58 @@ setInterval(() => {
                 let landData = pLandDataInterface.data[result];
                 if (landData.settings.notifyItemBar) {
                     // 发送进入领地的文本
-                    player.sendText(i18n.$t("alert.buttom.join", [landData.settings.name]), 5);
+                    player.sendText(
+                        i18n.$t("alert.buttom.join", [landData.settings.name]),
+                        5
+                    );
                 }
                 if (enableDrawLine && landData.settings.drawCube) {
                     // 画线
-                    drawCube(landData.range.min_position[0], landData.range.min_position[1], landData.range.min_position[2], landData.range.max_position[0] - landData.range.min_position[0] + 1, landData.range.max_position[1] - landData.range.min_position[1] + 1, landData.range.max_position[2] - landData.range.min_position[2] + 1, landData.range.dimid, "c", 0.02, true);
+                    drawCube(
+                        landData.range.min_position[0],
+                        landData.range.min_position[1],
+                        landData.range.min_position[2],
+                        landData.range.max_position[0] -
+                            landData.range.min_position[0] +
+                            1,
+                        landData.range.max_position[1] -
+                            landData.range.min_position[1] +
+                            1,
+                        landData.range.max_position[2] -
+                            landData.range.min_position[2] +
+                            1,
+                        landData.range.dimid,
+                        ParticleColor.Green
+                    );
                 }
-                if (playerState[player.xuid].state === "playing" && landData.settings.notifytoOwner && player.xuid === landData.settings.owner) {
+                if (
+                    playerState[player.xuid].state === "playing" &&
+                    landData.settings.notifytoOwner &&
+                    player.xuid === landData.settings.owner
+                ) {
                     // 领地所有者提示
-                    player.sendText(i18n.$t("alert.text.owner", [data.xuid2name(landData.settings.owner)]), 0);
-                } else if (playerState[player.xuid].state === "playing" && landData.settings.notifytoPlayer) {
+                    player.sendText(
+                        i18n.$t("alert.text.owner", [
+                            data.xuid2name(landData.settings.owner),
+                        ]),
+                        0
+                    );
+                } else if (
+                    playerState[player.xuid].state === "playing" &&
+                    landData.settings.notifytoPlayer
+                ) {
                     // 领地所有者提示
-                    player.sendText(i18n.$t("alert.text.owner", [data.xuid2name(landData.settings.owner)]), 0);
+                    player.sendText(
+                        i18n.$t("alert.text.owner", [
+                            data.xuid2name(landData.settings.owner),
+                        ]),
+                        0
+                    );
                 }
                 if (landData.resell) {
-                    player.sendText(i18n.$t("resell.notify", [landData.resell]));
+                    player.sendText(
+                        i18n.$t("resell.notify", [landData.resell])
+                    );
                 }
             }
         } //检查团队领地
@@ -1409,14 +1809,40 @@ setInterval(() => {
             if (!result) {
                 if (playerState[player.xuid].inOLand !== "") {
                     // 离开领地
-                    let landData = OlandDataInterface.data[playerState[player.xuid].inOLand];
-                    if (playerState[player.xuid].state === "playing" && landData.settings.notifyItemBar) {
+                    let landData =
+                        OlandDataInterface.data[
+                            playerState[player.xuid].inOLand
+                        ];
+                    if (
+                        playerState[player.xuid].state === "playing" &&
+                        landData.settings.notifyItemBar
+                    ) {
                         // 离开提示
-                        player.sendText(i18n.$t("alert.buttom.orgleave", [landData.settings.name]), 5);
+                        player.sendText(
+                            i18n.$t("alert.buttom.orgleave", [
+                                landData.settings.name,
+                            ]),
+                            5
+                        );
                     }
                     if (enableDrawLine && landData.settings.drawCube) {
                         // 画线
-                        drawCube(landData.range.min_position[0], landData.range.min_position[1], landData.range.min_position[2], landData.range.max_position[0] - landData.range.min_position[0] + 1, landData.range.max_position[1] - landData.range.min_position[1] + 1, landData.range.max_position[2] - landData.range.min_position[2] + 1, landData.range.dimid, "e", 0.04, true);
+                        drawCube(
+                            landData.range.min_position[0],
+                            landData.range.min_position[1],
+                            landData.range.min_position[2],
+                            landData.range.max_position[0] -
+                                landData.range.min_position[0] +
+                                1,
+                            landData.range.max_position[1] -
+                                landData.range.min_position[1] +
+                                1,
+                            landData.range.max_position[2] -
+                                landData.range.min_position[2] +
+                                1,
+                            landData.range.dimid,
+                            ParticleColor.Yellow
+                        );
                     }
                     playerState[player.xuid].inOLand = "";
                 }
@@ -1434,18 +1860,57 @@ setInterval(() => {
                     let landData = OlandDataInterface.data[result];
                     if (landData.settings.notifyItemBar) {
                         // 发送进入领地的文本
-                        player.sendText(i18n.$t("alert.buttom.orgjoin", [landData.settings.name]), 5);
+                        player.sendText(
+                            i18n.$t("alert.buttom.orgjoin", [
+                                landData.settings.name,
+                            ]),
+                            5
+                        );
                     }
                     if (enableDrawLine && landData.settings.drawCube) {
                         // 画线
-                        drawCube(landData.range.min_position[0], landData.range.min_position[1], landData.range.min_position[2], landData.range.max_position[0] - landData.range.min_position[0] + 1, landData.range.max_position[1] - landData.range.min_position[1] + 1, landData.range.max_position[2] - landData.range.min_position[2] + 1, landData.range.dimid, "c", 0.02, true);
+                        drawCube(
+                            landData.range.min_position[0],
+                            landData.range.min_position[1],
+                            landData.range.min_position[2],
+                            landData.range.max_position[0] -
+                                landData.range.min_position[0] +
+                                1,
+                            landData.range.max_position[1] -
+                                landData.range.min_position[1] +
+                                1,
+                            landData.range.max_position[2] -
+                                landData.range.min_position[2] +
+                                1,
+                            landData.range.dimid,
+                            ParticleColor.Green
+                        );
                     }
-                    if (playerState[player.xuid].state === "playing" && landData.settings.notifytoOwner && orgAPI.getOrgNum(player.xuid) === landData.settings.owner && orgAPI.isOwner(player.xuid)) {
+                    if (
+                        playerState[player.xuid].state === "playing" &&
+                        landData.settings.notifytoOwner &&
+                        orgAPI.getOrgNum(player.xuid) ===
+                            landData.settings.owner &&
+                        orgAPI.isOwner(player.xuid)
+                    ) {
                         // 领地所有者提示
-                        player.sendText(i18n.$t("alert.text.owner", [orgAPI.getOrgName(landData.settings.owner)]), 0);
-                    } else if (playerState[player.xuid].state === "playing" && landData.settings.notifytoPlayer) {
+                        player.sendText(
+                            i18n.$t("alert.text.owner", [
+                                orgAPI.getOrgName(landData.settings.owner),
+                            ]),
+                            0
+                        );
+                    } else if (
+                        playerState[player.xuid].state === "playing" &&
+                        landData.settings.notifytoPlayer
+                    ) {
                         // 领地所有者提示
-                        player.sendText(i18n.$t("alert.text.owner", [orgAPI.getOrgName(landData.settings.owner)]), 0);
+                        player.sendText(
+                            i18n.$t("alert.text.owner", [
+                                orgAPI.getOrgName(landData.settings.owner),
+                            ]),
+                            0
+                        );
                     }
                 }
             }
@@ -1510,10 +1975,26 @@ function CommandEncloseHander(player, action) {
             } else {
                 // 维度相同，仅写入坐标
                 playerState[player.xuid].enclosure.posA = [pos.x, pos.y, pos.z];
-                if (playerState[player.xuid].enclosure.posA.length !== 0 && playerState[player.xuid].enclosure.posB.length !== 0 && enableDrawLine) {
+                if (
+                    playerState[player.xuid].enclosure.posA.length !== 0 &&
+                    playerState[player.xuid].enclosure.posB.length !== 0 &&
+                    enableDrawLine
+                ) {
                     // 画线
-                    let posInter = twoPosFormat(playerState[player.xuid].enclosure.posA, playerState[player.xuid].enclosure.posB);
-                    drawCube(posInter.minX, posInter.minY, posInter.minZ, posInter.dx + 1, posInter.dy + 1, posInter.dz + 1, playerState[player.xuid].enclosure.dim, "f", 0.04, true);
+                    let posInter = twoPosFormat(
+                        playerState[player.xuid].enclosure.posA,
+                        playerState[player.xuid].enclosure.posB
+                    );
+                    drawCube(
+                        posInter.minX,
+                        posInter.minY,
+                        posInter.minZ,
+                        posInter.dx + 1,
+                        posInter.dy + 1,
+                        posInter.dz + 1,
+                        playerState[player.xuid].enclosure.dim,
+                        ParticleColor.Red
+                    );
                 }
             }
             break;
@@ -1533,10 +2014,26 @@ function CommandEncloseHander(player, action) {
             } else {
                 // 维度相同，仅写入坐标
                 playerState[player.xuid].enclosure.posB = [pos.x, pos.y, pos.z];
-                if (playerState[player.xuid].enclosure.posA.length !== 0 && playerState[player.xuid].enclosure.posB.length !== 0 && enableDrawLine) {
+                if (
+                    playerState[player.xuid].enclosure.posA.length !== 0 &&
+                    playerState[player.xuid].enclosure.posB.length !== 0 &&
+                    enableDrawLine
+                ) {
                     // 画线
-                    let posInter = twoPosFormat(playerState[player.xuid].enclosure.posA, playerState[player.xuid].enclosure.posB);
-                    drawCube(posInter.minX, posInter.minY, posInter.minZ, posInter.dx + 1, posInter.dy + 1, posInter.dz + 1, playerState[player.xuid].enclosure.dim, "f", 0.04, true);
+                    let posInter = twoPosFormat(
+                        playerState[player.xuid].enclosure.posA,
+                        playerState[player.xuid].enclosure.posB
+                    );
+                    drawCube(
+                        posInter.minX,
+                        posInter.minY,
+                        posInter.minZ,
+                        posInter.dx + 1,
+                        posInter.dy + 1,
+                        posInter.dz + 1,
+                        playerState[player.xuid].enclosure.dim,
+                        ParticleColor.Red
+                    );
                 }
             }
             break;
@@ -1550,28 +2047,73 @@ function CommandEncloseHander(player, action) {
             if (playerState[player.xuid].state !== "reEnclosing") {
                 playerState[player.xuid].state = "enclosing";
             }
-            if (playerState[player.xuid].enclosure.posA.length !== 0 && playerState[player.xuid].enclosure.posB.length !== 0 && enableDrawLine) {
+            if (
+                playerState[player.xuid].enclosure.posA.length !== 0 &&
+                playerState[player.xuid].enclosure.posB.length !== 0 &&
+                enableDrawLine
+            ) {
                 // 画线
-                let posInter = twoPosFormat(playerState[player.xuid].enclosure.posA, playerState[player.xuid].enclosure.posB);
-                drawCube(posInter.minX, posInter.minY, posInter.minZ, posInter.dx + 1, posInter.dy + 1, posInter.dz + 1, playerState[player.xuid].enclosure.dim, "f", 0.04, true);
+                let posInter = twoPosFormat(
+                    playerState[player.xuid].enclosure.posA,
+                    playerState[player.xuid].enclosure.posB
+                );
+                drawCube(
+                    posInter.minX,
+                    posInter.minY,
+                    posInter.minZ,
+                    posInter.dx + 1,
+                    posInter.dy + 1,
+                    posInter.dz + 1,
+                    playerState[player.xuid].enclosure.dim,
+                    ParticleColor.Red
+                );
             }
             break;
         case "edit":
             // 手动编写
-            if (playerState[player.xuid].enclosure.posA.length === 0 || playerState[player.xuid].enclosure.posB.length === 0) {
-                // 有一个坐标没有，不允许编辑。
+            if (
+                playerState[player.xuid].enclosure.posA.length === 0 ||
+                playerState[player.xuid].enclosure.posB.length === 0
+            ) {
+                // 有一个坐标没有，不允许编辑
                 player.tell(i18n.$t("enclose.edit.noHavePos"));
                 return;
             }
             // 创建GUI
-            let fm = mc.newCustomForm().setTitle(i18n.$t("enclose.edit.formTitle"));
+            let fm = mc
+                .newCustomForm()
+                .setTitle(i18n.$t("enclose.edit.formTitle"));
             fm.addLabel(i18n.$t("enclose.edit.label"));
-            fm.addInput(i18n.$t("enclose.edit.posA") + "X", i18n.$t("enclose.edit.posDesp"), String(playerState[player.xuid].enclosure.posA[0]));
-            fm.addInput(i18n.$t("enclose.edit.posA") + "Y", i18n.$t("enclose.edit.posDesp"), String(playerState[player.xuid].enclosure.posA[1]));
-            fm.addInput(i18n.$t("enclose.edit.posA") + "Z", i18n.$t("enclose.edit.posDesp"), String(playerState[player.xuid].enclosure.posA[2]));
-            fm.addInput(i18n.$t("enclose.edit.posB") + "X", i18n.$t("enclose.edit.posDesp"), String(playerState[player.xuid].enclosure.posB[0]));
-            fm.addInput(i18n.$t("enclose.edit.posB") + "Y", i18n.$t("enclose.edit.posDesp"), String(playerState[player.xuid].enclosure.posB[1]));
-            fm.addInput(i18n.$t("enclose.edit.posB") + "Z", i18n.$t("enclose.edit.posDesp"), String(playerState[player.xuid].enclosure.posB[2]));
+            fm.addInput(
+                i18n.$t("enclose.edit.posA") + "X",
+                i18n.$t("enclose.edit.posDesp"),
+                String(playerState[player.xuid].enclosure.posA[0])
+            );
+            fm.addInput(
+                i18n.$t("enclose.edit.posA") + "Y",
+                i18n.$t("enclose.edit.posDesp"),
+                String(playerState[player.xuid].enclosure.posA[1])
+            );
+            fm.addInput(
+                i18n.$t("enclose.edit.posA") + "Z",
+                i18n.$t("enclose.edit.posDesp"),
+                String(playerState[player.xuid].enclosure.posA[2])
+            );
+            fm.addInput(
+                i18n.$t("enclose.edit.posB") + "X",
+                i18n.$t("enclose.edit.posDesp"),
+                String(playerState[player.xuid].enclosure.posB[0])
+            );
+            fm.addInput(
+                i18n.$t("enclose.edit.posB") + "Y",
+                i18n.$t("enclose.edit.posDesp"),
+                String(playerState[player.xuid].enclosure.posB[1])
+            );
+            fm.addInput(
+                i18n.$t("enclose.edit.posB") + "Z",
+                i18n.$t("enclose.edit.posDesp"),
+                String(playerState[player.xuid].enclosure.posB[2])
+            );
             // 发送GUI
             player.sendForm(fm, (pl, dt) => {
                 // 没有圈地
@@ -1589,46 +2131,93 @@ function CommandEncloseHander(player, action) {
                         return;
                     }
                     // 写state
-                    playerState[xuid].enclosure.posA = [parseInt(dt[1]), parseInt(dt[2]), parseInt(dt[3])];
-                    playerState[xuid].enclosure.posB = [parseInt(dt[4]), parseInt(dt[5]), parseInt(dt[6])];
-
+                    playerState[xuid].enclosure.posA = [
+                        parseInt(dt[1]),
+                        parseInt(dt[2]),
+                        parseInt(dt[3]),
+                    ];
+                    playerState[xuid].enclosure.posB = [
+                        parseInt(dt[4]),
+                        parseInt(dt[5]),
+                        parseInt(dt[6]),
+                    ];
 
                     pl.tell(i18n.$t("enclose.edit.success"));
-                    if (playerState[player.xuid].enclosure.posA.length !== 0 && playerState[player.xuid].enclosure.posB.length !== 0 && enableDrawLine) {
+                    if (
+                        playerState[player.xuid].enclosure.posA.length !== 0 &&
+                        playerState[player.xuid].enclosure.posB.length !== 0 &&
+                        enableDrawLine
+                    ) {
                         // 画线
-                        let posInter = twoPosFormat(playerState[player.xuid].enclosure.posA, playerState[player.xuid].enclosure.posB);
-                        drawCube(posInter.minX, posInter.minY, posInter.minZ, posInter.dx + 1, posInter.dy + 1, posInter.dz + 1, playerState[player.xuid].enclosure.dim, "f", 0.04, true);
+                        let posInter = twoPosFormat(
+                            playerState[player.xuid].enclosure.posA,
+                            playerState[player.xuid].enclosure.posB
+                        );
+                        drawCube(
+                            posInter.minX,
+                            posInter.minY,
+                            posInter.minZ,
+                            posInter.dx + 1,
+                            posInter.dy + 1,
+                            posInter.dz + 1,
+                            playerState[player.xuid].enclosure.dim,
+                            ParticleColor.Red
+                        );
                     }
                 }
             });
             return;
         case "confirm":
-            if (playerState[player.xuid].state === "enclosing" || playerState[player.xuid].state === "reEnclosing") {
-                if (playerState[player.xuid].enclosure.posA.length === 0 || playerState[player.xuid].enclosure.posB.length === 0) {
-                    // 有一个坐标没有，不允许编辑。
+            if (
+                playerState[player.xuid].state === "enclosing" ||
+                playerState[player.xuid].state === "reEnclosing"
+            ) {
+                if (
+                    playerState[player.xuid].enclosure.posA.length === 0 ||
+                    playerState[player.xuid].enclosure.posB.length === 0
+                ) {
+                    // 有一个坐标没有，不允许编辑
                     player.tell(i18n.$t("enclose.confirm.noHavePos"));
                     return;
                 }
                 let dim = playerState[player.xuid].enclosure.dim;
-                let posA = playerState[player.xuid].enclosure.posA.length ? String(playerState[player.xuid].enclosure.posA) : i18n.$t("enclose.edit,nochoose");
-                let posB = playerState[player.xuid].enclosure.posB.length ? String(playerState[player.xuid].enclosure.posB) : i18n.$t("enclose.edit,nochoose");
+                let posA = playerState[player.xuid].enclosure.posA.length
+                    ? String(playerState[player.xuid].enclosure.posA)
+                    : i18n.$t("enclose.edit.nochoose");
+                let posB = playerState[player.xuid].enclosure.posB.length
+                    ? String(playerState[player.xuid].enclosure.posB)
+                    : i18n.$t("enclose.edit.nochoose");
                 // 只允许一种圈地模式的情况
-                if (!configAPI.data.common.allow2D && !configAPI.data.common.allow3D) {
-                    // 傻逼服主俩模式全关了圈个屁地，滚！
+                if (
+                    configAPI.data.common.allow2D &&
+                    configAPI.data.common.allow3D
+                ) {
+                    player.sendModalForm(
+                        i18n.$t("enclose.confirm.title"),
+                        i18n.$t("enclose.confirm.info", [posA, posB, dim]),
+                        "2D",
+                        "3D",
+                        function (pl, dt) {
+                            if (dt == null) {
+                                return;
+                            }
+                            playerState[player.xuid].enclosure.type2D = !!dt;
+                            playerState[player.xuid].state === "enclosing"
+                                ? SelectEncloseType(pl)
+                                : ReEnclosingScan(pl);
+                        }
+                    );
                 } else if (!configAPI.data.common.allow3D) {
                     playerState[player.xuid].enclosure.type2D = true;
-                    playerState[player.xuid].state === "enclosing" ? SelectEncloseType(pl) : ReEnclosingScan(pl);
+                    playerState[player.xuid].state === "enclosing"
+                        ? SelectEncloseType(player)
+                        : ReEnclosingScan(player);
                 } else if (!configAPI.data.common.allow2D) {
                     playerState[player.xuid].enclosure.type2D = false;
-                    playerState[player.xuid].state === "enclosing" ? SelectEncloseType(pl) : ReEnclosingScan(pl);
+                    playerState[player.xuid].state === "enclosing"
+                        ? SelectEncloseType(player)
+                        : ReEnclosingScan(player);
                 }
-                player.sendModalForm(i18n.$t("enclose.confirm.title"), i18n.$t("enclose.confirm.info", [posA, posB, dim]), "2D", "3D", function (pl, dt) {
-                    if (dt == null) {
-                        return;
-                    }
-                    playerState[player.xuid].enclosure.type2D = !!dt;
-                    playerState[player.xuid].state === "enclosing" ? SelectEncloseType(pl) : ReEnclosingScan(pl);
-                });
             } else {
                 player.tell(i18n.$t("enclose.edit.noEnclosing"));
             }
@@ -1640,7 +2229,10 @@ function CommandEncloseHander(player, action) {
 
 // 选择圈地类型，检查限制，冲突...
 function SelectEncloseType(player) {
-    let posInter = twoPosFormat(playerState[player.xuid].enclosure.posA, playerState[player.xuid].enclosure.posB);
+    let posInter = twoPosFormat(
+        playerState[player.xuid].enclosure.posA,
+        playerState[player.xuid].enclosure.posB
+    );
     // 检查坐标
     if (posInter.maxY > 319) {
         posInter.maxY = 319;
@@ -1654,44 +2246,86 @@ function SelectEncloseType(player) {
     }
     posInter.dy = posInter.maxY - posInter.minY;
     // 维度限制
-    if (!configAPI.data.limit.allowDimension.includes(playerState[player.xuid].enclosure.dim) && !configAPI.data.operator.includes(player.xuid)) {
+    if (
+        !configAPI.data.limit.allowDimension.includes(
+            playerState[player.xuid].enclosure.dim
+        ) &&
+        !configAPI.data.operator.includes(player.xuid)
+    ) {
         // 玩家不是管理员且圈地位置不在允许范围内
         player.tell(i18n.$t("enclose.confirm.dimensionNotAllow"));
+    }
+    if (
+        belongToApi.getLand(player.xuid).length >= configAPI.data.limit.maxLands
+    ) {
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("enclose.confirm.countover.title"))
+            .setContent(
+                i18n.$t("enclose.confirm.countover.info", [
+                    configAPI.data.limit.maxLands,
+                ])
+            );
+        player.sendForm(fm, () => {});
     }
     // 大小限制
     if (playerState[player.xuid].enclosure.type2D) {
         let square = posInter.dx * posInter.dz;
-        if (square > configAPI.data.limit.type2DSquare[1] || square < configAPI.data.limit.type2DSquare[0]) {
+        if (
+            square > configAPI.data.limit.type2DSquare[1] ||
+            square < configAPI.data.limit.type2DSquare[0]
+        ) {
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.confirm.over"))
-                .setContent(i18n.$t("enclose.confirm.2D.over", [square, configAPI.data.limit.type2DSquare[1], configAPI.data.limit.type2DSquare[0]]));
-            player.sendForm(fm, () => { });
+                .setContent(
+                    i18n.$t("enclose.confirm.2D.over", [
+                        square,
+                        configAPI.data.limit.type2DSquare[1],
+                        configAPI.data.limit.type2DSquare[0],
+                    ])
+                );
+            player.sendForm(fm, () => {});
             return;
         }
     } else {
         let volume = posInter.dx * posInter.dz * posInter.dz;
-        if (volume > configAPI.data.limit.type3DVolume[1] || volume < configAPI.data.limit.type3DVolume[0]) {
+        if (
+            volume > configAPI.data.limit.type3DVolume[1] ||
+            volume < configAPI.data.limit.type3DVolume[0]
+        ) {
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.confirm.over"))
-                .setContent(i18n.$t("enclose.confirm.3D.over", [volume, configAPI.data.limit.type3DVolume[1], configAPI.data.limit.type3DVolume[0]]));
-            player.sendForm(fm, () => { });
+                .setContent(
+                    i18n.$t("enclose.confirm.3D.over", [
+                        volume,
+                        configAPI.data.limit.type3DVolume[1],
+                        configAPI.data.limit.type3DVolume[0],
+                    ])
+                );
+            player.sendForm(fm, () => {});
             return;
         }
     }
     // 正式开始圈地
     if (enableOrg && orgAPI.isOwner(player.xuid)) {
         // 允许圈公会地，需要确认
-        player.sendModalForm(i18n.$t("enclose.chooseType.title"), i18n.$t("enclose.chooseType.desp"), i18n.$t("enclose.chooseType.priButton"), i18n.$t("enclose.chooseType.orgButton"), (pl, dt) => {
-            if (dt == null) {
-                return;
-            } else if (!dt) {
-                enclosePayment(pl, posInter, orgAPI.getOrgNum(pl.xuid));
-            } else {
-                enclosePayment(pl, posInter);
+        player.sendModalForm(
+            i18n.$t("enclose.chooseType.title"),
+            i18n.$t("enclose.chooseType.desp"),
+            i18n.$t("enclose.chooseType.priButton"),
+            i18n.$t("enclose.chooseType.orgButton"),
+            (pl, dt) => {
+                if (dt == null) {
+                    return;
+                } else if (!dt) {
+                    enclosePayment(pl, posInter, orgAPI.getOrgNum(pl.xuid));
+                } else {
+                    enclosePayment(pl, posInter);
+                }
             }
-        });
+        );
     } else {
         enclosePayment(player, posInter);
     }
@@ -1700,37 +2334,59 @@ function enclosePayment(player, posInterface, orgNum = null) {
     let conflictLandId;
     // 团队领地冲突检查：
     if (enableOrg) {
-        conflictLandId = getOLandConflict(posInterface, playerState[player.xuid].enclosure.dim, playerState[player.xuid].enclosure.type2D, [], player, !!orgNum);
+        conflictLandId = getOLandConflict(
+            posInterface,
+            playerState[player.xuid].enclosure.dim,
+            playerState[player.xuid].enclosure.type2D,
+            [],
+            player,
+            !!orgNum
+        );
         if (conflictLandId) {
             // 发现冲突
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.conflict.title"))
                 .setContent(i18n.$t("enclose.conflict.org", [conflictLandId]));
-            player.sendForm(fm, () => { });
+            player.sendForm(fm, () => {});
             return;
         }
     }
     // 私人领地冲突检查
-    conflictLandId = getPLandConflict(posInterface, playerState[player.xuid].enclosure.dim, playerState[player.xuid].enclosure.type2D);
+    conflictLandId = getPLandConflict(
+        posInterface,
+        playerState[player.xuid].enclosure.dim,
+        playerState[player.xuid].enclosure.type2D
+    );
     if (conflictLandId) {
         // 发现冲突
         let fm = mc
             .newSimpleForm()
             .setTitle(i18n.$t("enclose.conflict.title"))
             .setContent(i18n.$t("enclose.conflict.pri", [conflictLandId]));
-        player.sendForm(fm, () => { });
+        player.sendForm(fm, () => {});
         return;
     }
     // 算钱
     let price = 0;
     if (playerState[player.xuid].enclosure.type2D) {
         // 2D地皮价格
-        price = posInterface.dx * posInterface.dz * configAPI.data.sell.type2D.priceSquare;
+        price =
+            posInterface.dx *
+            posInterface.dz *
+            configAPI.data.sell.type2D.priceSquare;
     } else if (configAPI.data.sell.type3D.priceY) {
-        price = posInterface.dx * posInterface.dz * configAPI.data.sell.type3D.priceXZ + posInterface.dy * configAPI.data.sell.type3D.priceY;
+        price =
+            posInterface.dx *
+                posInterface.dz *
+                configAPI.data.sell.type3D.priceXZ +
+            posInterface.dy * configAPI.data.sell.type3D.priceY;
     } else {
-        price = posInterface.dx * posInterface.dy * posInterface.dz * configAPI.data.sell.type3D.priceXZ;
+        price =
+            posInterface.dx *
+            posInterface.dy *
+            posInterface.dz *
+            configAPI.data.sell.type3D.priceXZ;
     }
     if (!orgNum) {
         // 直接发送付款页面
@@ -1739,82 +2395,128 @@ function enclosePayment(player, posInterface, orgNum = null) {
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.payment.title"))
-                .setContent(i18n.$t("enclose.payment.moneyNoEnough", [configAPI.data.economy.moneyName, price, moneyUni.get(player)]));
-            player.sendForm(fm, () => { });
+                .setContent(
+                    i18n.$t("enclose.payment.moneyNoEnough", [
+                        configAPI.data.economy.moneyName,
+                        price,
+                        moneyUni.get(player),
+                    ])
+                );
+            player.sendForm(fm, () => {});
         } else {
             // 钱够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.pri", [price, moneyUni.get(player)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
-                if (dt == null) {
-                    return;
-                }
-                if (dt) {
-                    if (!moneyUni.pay(player, price)) {
-                        player.tell(i18n.$t("enclose.payment.error"));
+            player.sendModalForm(
+                i18n.$t("enclose.payment.title"),
+                i18n.$t("enclose.payment.pri", [price, moneyUni.get(player)]),
+                i18n.$t("common.confirm"),
+                i18n.$t("common.cancel"),
+                (pl, dt) => {
+                    if (dt == null) {
                         return;
                     }
-                    encloseMain(pl, posInterface);
+                    if (dt) {
+                        if (!moneyUni.pay(player, price)) {
+                            player.tell(i18n.$t("enclose.payment.error"));
+                            return;
+                        }
+                        encloseMain(pl, posInterface);
+                    }
                 }
-            });
+            );
         }
     } else {
         // 是公会，要求其选择自己的钱包还是公会钱包
-        if (moneyUni.get(player) < price && orgAPI.orgGetMoney(orgNum) < price) {
+        if (
+            moneyUni.get(player) < price &&
+            orgAPI.orgGetMoney(orgNum) < price
+        ) {
             // 完全没钱
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.payment.title"))
-                .setContent(i18n.$t("enclose.payment.moneyNoEnough", [configAPI.data.economy.moneyName, price, moneyUni.get(player)]));
-            player.sendForm(fm, () => { });
+                .setContent(
+                    i18n.$t("enclose.payment.moneyNoEnough", [
+                        configAPI.data.economy.moneyName,
+                        price,
+                        moneyUni.get(player),
+                    ])
+                );
+            player.sendForm(fm, () => {});
             return;
         } else if (moneyUni.get(player) < price) {
             // 工会基金钱够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.ori", [price, orgAPI.orgGetMoney(orgNum)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
-                if (dt == null) {
-                    return;
-                }
-                if (dt) {
-                    if (!orgAPI.orgAddMoney(orgNum, -price)) {
-                        player.tell(i18n.$t("enclose.payment.error"));
+            player.sendModalForm(
+                i18n.$t("enclose.payment.title"),
+                i18n.$t("enclose.payment.ori", [
+                    price,
+                    orgAPI.orgGetMoney(orgNum),
+                ]),
+                i18n.$t("common.confirm"),
+                i18n.$t("common.cancel"),
+                (pl, dt) => {
+                    if (dt == null) {
                         return;
                     }
-                    encloseMain(pl, posInterface, orgNum);
+                    if (dt) {
+                        if (!orgAPI.orgAddMoney(orgNum, -price)) {
+                            player.tell(i18n.$t("enclose.payment.error"));
+                            return;
+                        }
+                        encloseMain(pl, posInterface, orgNum);
+                    }
                 }
-            });
+            );
             return;
         } else if (orgAPI.orgGetMoney(orgAPI.getOrgNum(player.xuid)) < price) {
             // 玩家钱包钱够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.pri", [price, moneyUni.get(player)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
-                if (dt == null) {
-                    return;
-                }
-                if (dt) {
-                    if (!moneyUni.pay(player, price)) {
-                        player.tell(i18n.$t("enclose.payment.error"));
+            player.sendModalForm(
+                i18n.$t("enclose.payment.title"),
+                i18n.$t("enclose.payment.pri", [price, moneyUni.get(player)]),
+                i18n.$t("common.confirm"),
+                i18n.$t("common.cancel"),
+                (pl, dt) => {
+                    if (dt == null) {
                         return;
                     }
-                    encloseMain(pl, posInterface, orgNum);
+                    if (dt) {
+                        if (!moneyUni.pay(player, price)) {
+                            player.tell(i18n.$t("enclose.payment.error"));
+                            return;
+                        }
+                        encloseMain(pl, posInterface, orgNum);
+                    }
                 }
-            });
+            );
         } else {
             // 钱都够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.choose", [price, moneyUni.get(player), orgAPI.orgGetMoney(orgNum)]), i18n.$t("enclose.pay.self"), i18n.$t("enclose.pay.org"), (pl, dt) => {
-                if (dt == null) {
-                    return;
-                }
-                if (dt) {
-                    if (!moneyUni.pay(player, price)) {
-                        player.tell(i18n.$t("enclose.payment.error"));
+            player.sendModalForm(
+                i18n.$t("enclose.payment.title"),
+                i18n.$t("enclose.payment.choose", [
+                    price,
+                    moneyUni.get(player),
+                    orgAPI.orgGetMoney(orgNum),
+                ]),
+                i18n.$t("enclose.pay.self"),
+                i18n.$t("enclose.pay.org"),
+                (pl, dt) => {
+                    if (dt == null) {
                         return;
                     }
-                    encloseMain(pl, posInterface, orgNum);
-                } else {
-                    if (!orgAPI.orgAddMoney(orgNum, -price)) {
-                        player.tell(i18n.$t("enclose.payment.error"));
-                        return;
+                    if (dt) {
+                        if (!moneyUni.pay(player, price)) {
+                            player.tell(i18n.$t("enclose.payment.error"));
+                            return;
+                        }
+                        encloseMain(pl, posInterface, orgNum);
+                    } else {
+                        if (!orgAPI.orgAddMoney(orgNum, -price)) {
+                            player.tell(i18n.$t("enclose.payment.error"));
+                            return;
+                        }
+                        encloseMain(pl, posInterface, orgNum);
                     }
-                    encloseMain(pl, posInterface, orgNum);
                 }
-            });
+            );
         }
     }
 }
@@ -1823,26 +2525,37 @@ function encloseMain(player, posInterface, orgNum = null) {
     let conflictLandId;
     // 团队领地冲突检查：
     if (enableOrg) {
-        conflictLandId = getOLandConflict(posInterface, playerState[player.xuid].enclosure.dim, playerState[player.xuid].enclosure.type2D, [], player, !!orgNum);
+        conflictLandId = getOLandConflict(
+            posInterface,
+            playerState[player.xuid].enclosure.dim,
+            playerState[player.xuid].enclosure.type2D,
+            [],
+            player,
+            !!orgNum
+        );
         if (conflictLandId) {
             // 发现冲突
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.conflict.title"))
                 .setContent(i18n.$t("enclose.conflict.org", [conflictLandId]));
-            player.sendForm(fm, () => { });
+            player.sendForm(fm, () => {});
             return;
         }
     }
     // 私人领地冲突检查
-    conflictLandId = getPLandConflict(posInterface, playerState[player.xuid].enclosure.dim, playerState[player.xuid].enclosure.type2D);
+    conflictLandId = getPLandConflict(
+        posInterface,
+        playerState[player.xuid].enclosure.dim,
+        playerState[player.xuid].enclosure.type2D
+    );
     if (conflictLandId) {
         // 发现冲突
         let fm = mc
             .newSimpleForm()
             .setTitle(i18n.$t("enclose.conflict.title"))
             .setContent(i18n.$t("enclose.conflict.pri", [conflictLandId]));
-        player.sendForm(fm, () => { });
+        player.sendForm(fm, () => {});
         return;
     }
     let uuid = system.randomGuid();
@@ -1851,9 +2564,17 @@ function encloseMain(player, posInterface, orgNum = null) {
         OlandDataInterface.data[uuid] = {
             range: {
                 type2D: playerState[player.xuid].enclosure.type2D,
-                min_position: [posInterface.minX, posInterface.minY, posInterface.minZ],
+                min_position: [
+                    posInterface.minX,
+                    posInterface.minY,
+                    posInterface.minZ,
+                ],
                 dimid: playerState[player.xuid].enclosure.dim,
-                max_position: [posInterface.maxX, posInterface.maxY, posInterface.maxZ],
+                max_position: [
+                    posInterface.maxX,
+                    posInterface.maxY,
+                    posInterface.maxZ,
+                ],
             },
             settings: {
                 notifyItemBar: true,
@@ -1878,7 +2599,7 @@ function encloseMain(player, posInterface, orgNum = null) {
                 organization: {
                     allowOtherEnclose: false, // 允许任何人圈地
                     allowMemberEnclose: false, // 允许团队里的人圈地
-                    trustMembers: true, // 信任团队成员。（否则只能圈地）
+                    trustMembers: true, // 信任团队成员（否则只能圈地）
                 },
                 blocks: {
                     blockPlace: false, // 允许放置方块
@@ -1896,9 +2617,9 @@ function encloseMain(player, posInterface, orgNum = null) {
                     allowUseMinecart: true,
                     allowShoot: false,
                     allowAttackEntity: false,
-                    allowAnimalSpawn:true,
-                    allowMobSpawn:false,
-                    allowNeutralSpawn:true
+                    allowAnimalSpawn: true,
+                    allowMobSpawn: false,
+                    allowNeutralSpawn: true,
                 },
                 container: {
                     openShulkerBox: false,
@@ -1917,7 +2638,7 @@ function encloseMain(player, posInterface, orgNum = null) {
                     changeComparator: false,
                     changeRepeater: false,
                     HopperChange: false, // 漏斗
-                    pistonPush: false
+                    pistonPush: false,
                 },
                 tools: {
                     useBell: false,
@@ -1972,9 +2693,17 @@ function encloseMain(player, posInterface, orgNum = null) {
         pLandDataInterface.data[uuid] = {
             range: {
                 type2D: playerState[player.xuid].enclosure.type2D,
-                min_position: [posInterface.minX, posInterface.minY, posInterface.minZ],
+                min_position: [
+                    posInterface.minX,
+                    posInterface.minY,
+                    posInterface.minZ,
+                ],
                 dimid: playerState[player.xuid].enclosure.dim,
-                max_position: [posInterface.maxX, posInterface.maxY, posInterface.maxZ],
+                max_position: [
+                    posInterface.maxX,
+                    posInterface.maxY,
+                    posInterface.maxZ,
+                ],
             },
             settings: {
                 notifyItemBar: true,
@@ -2013,9 +2742,9 @@ function encloseMain(player, posInterface, orgNum = null) {
                     allowUseMinecart: true,
                     allowShoot: false,
                     allowAttackEntity: false,
-                    allowAnimalSpawn:true,
-                    allowMobSpawn:false,
-                    allowNeutralSpawn:true
+                    allowAnimalSpawn: true,
+                    allowMobSpawn: false,
+                    allowNeutralSpawn: true,
                 },
                 container: {
                     openShulkerBox: false,
@@ -2034,7 +2763,7 @@ function encloseMain(player, posInterface, orgNum = null) {
                     changeComparator: false,
                     changeRepeater: false,
                     HopperChange: false, // 漏斗
-                    pistonPush: false
+                    pistonPush: false,
                 },
                 tools: {
                     useBell: false,
@@ -2087,25 +2816,42 @@ function encloseMain(player, posInterface, orgNum = null) {
         }
     }
     playerState[player.xuid].state = "playing";
-    let fm = mc.newSimpleForm().setTitle(i18n.$t("enclose.payment.title")).setContent(i18n.$t("enclose.payment.success"));
-    player.sendForm(fm, () => { });
+    let fm = mc
+        .newSimpleForm()
+        .setTitle(i18n.$t("enclose.payment.title"))
+        .setContent(i18n.$t("enclose.payment.success"));
+    player.sendForm(fm, () => {});
 } // 定义命令
 mc.listen("onServerStarted", function () {
     // 圈地指令方法
-    let landComm = mc.newCommand("land", i18n.$t("command.description"), PermType.Any, 0x80);
+    let landComm = mc.newCommand(
+        "land",
+        i18n.$t("command.description"),
+        PermType.Any,
+        0x80
+    );
     landComm.setEnum("encloseEnterance", ["enclose"]);
-    landComm.setEnum("encloseAction", ["setpos1", "setpos2", "confirm", "cancel", "show", "edit"]);
-    landComm.setEnum("singleAction", ["this", "help", "dashboard", "buy"]);
-    landComm.setEnum("tpEnterance", ["tp"]);
-    landComm.setEnum("tpAction", ["gui", "set", "clear"]);
+    landComm.setEnum("encloseAction", [
+        "setpos1",
+        "setpos2",
+        "confirm",
+        "cancel",
+        "show",
+        "edit",
+    ]);
+    landComm.setEnum("singleAction", ["this", "dashboard", "buy"]);
     landComm.mandatory("action", ParamType.Enum, "encloseEnterance", 1);
     landComm.mandatory("enclose", ParamType.Enum, "encloseAction", 1);
     landComm.mandatory("action", ParamType.Enum, "singleAction", 1);
-    landComm.mandatory("action", ParamType.Enum, "tpEnterance", 1);
-    landComm.optional("tpaction", ParamType.Enum, "tpAction", 1);
     landComm.overload(["encloseEnterance", "encloseAction"]);
-    landComm.overload(["tpEnterance", "tpAction"]);
     landComm.overload(["singleAction"]);
+    if (configAPI.data.common.allowLandTeleport) {
+        landComm.setEnum("tpEnterance", ["tp"]);
+        landComm.setEnum("tpAction", ["gui", "set", "clear"]);
+        landComm.mandatory("action", ParamType.Enum, "tpEnterance", 1);
+        landComm.optional("tpaction", ParamType.Enum, "tpAction", 1);
+        landComm.overload(["tpEnterance", "tpAction"]);
+    }
     landComm.setCallback((_cmd, _ori, out, res) => {
         if (!_ori.player) {
             outp.error(i18n.$t("command.notplayer"));
@@ -2124,7 +2870,7 @@ mc.listen("onServerStarted", function () {
                 landResell(_ori.player);
                 break;
             case "dashboard":
-                DashBoardInit(_ori.player)
+                DashBoardInit(_ori.player);
                 break;
             default:
                 break;
@@ -2143,24 +2889,38 @@ function CommandThisHander(player) {
         //管理员，如果存在都允许
         permisstion = [!!pLandId, !!oLandId];
     }
-    if (pLandId && pLandDataInterface.data[pLandId].settings.owner === player.xuid) {
+    if (
+        pLandId &&
+        pLandDataInterface.data[pLandId].settings.owner === player.xuid
+    ) {
         permisstion[0] = true;
     }
-    if (oLandId && OlandDataInterface.data[oLandId].settings.owner === orgAPI.getOrgNum(player.xuid) && orgAPI.isOwner(player.xuid)) {
+    if (
+        oLandId &&
+        OlandDataInterface.data[oLandId].settings.owner ===
+            orgAPI.getOrgNum(player.xuid) &&
+        orgAPI.isOwner(player.xuid)
+    ) {
         permisstion[1] = true;
     }
     if (permisstion[0] && permisstion[1]) {
         //俩都允许，弹出窗口任选
-        player.sendModalForm(i18n.$t("this.manage.choose.title"), i18n.$t("this.manage.choose.desp"), i18n.$t("this.manage.choose.org"), i18n.$t("this.manage.choose.pri"), (pl, dt) => {
-            if (dt == null) {
-                return;
+        player.sendModalForm(
+            i18n.$t("this.manage.choose.title"),
+            i18n.$t("this.manage.choose.desp"),
+            i18n.$t("this.manage.choose.org"),
+            i18n.$t("this.manage.choose.pri"),
+            (pl, dt) => {
+                if (dt == null) {
+                    return;
+                }
+                if (dt) {
+                    ManageLand(player, oLandId, true);
+                } else {
+                    ManageLand(player, pLandId, false);
+                }
             }
-            if (dt) {
-                ManageLand(player, oLandId, true);
-            } else {
-                ManageLand(player, pLandId, false);
-            }
-        });
+        );
     } else if (permisstion[0]) {
         ManageLand(player, pLandId, false);
     } else if (permisstion[1]) {
@@ -2181,22 +2941,39 @@ function ManageLand(player, landId, isOrg = false) {
     let fm = mc.newSimpleForm();
     fm.setTitle(i18n.$t("manage.main.title"));
     fm.addButton(i18n.$t("manage.main.info"), "textures/items/book_enchanted");
-    fm.addButton(i18n.$t("manage.main.identification"), "textures/items/name_tag");
+    fm.addButton(
+        i18n.$t("manage.main.identification"),
+        "textures/items/name_tag"
+    );
     fm.addButton(i18n.$t("manage.main.events"), "textures/items/hopper");
-    fm.addButton(i18n.$t("manage.main.teleport"), "textures/items/ender_eye");
-    fm.addButton(i18n.$t("manage.main.permission"), "textures/items/diamond_sword");
+    if (configAPI.data.common.allowLandTeleport)
+        fm.addButton(
+            i18n.$t("manage.main.teleport"),
+            "textures/items/ender_eye"
+        );
+    fm.addButton(
+        i18n.$t("manage.main.permission"),
+        "textures/items/diamond_sword"
+    );
     fm.addButton(i18n.$t("manage.main.recycle"), "textures/items/totem");
     fm.addButton(i18n.$t("manage.main.reenclose"), "textures/items/map_empty");
     if (!isOrg) {
         //社区领地无法转让、分享与出售
-        fm.addButton(i18n.$t("manage.main.resell"), "textures/items/villagebell");
+        fm.addButton(
+            i18n.$t("manage.main.resell"),
+            "textures/items/villagebell"
+        );
         fm.addButton(i18n.$t("manage.main.share"), "textures/items/apple");
-        fm.addButton(i18n.$t("manage.main.changeOwner"), "textures/items/armor_stand");
+        fm.addButton(
+            i18n.$t("manage.main.changeOwner"),
+            "textures/items/armor_stand"
+        );
     }
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             return;
         }
+        if (dt > 2 && !configAPI.data.common.allowLandTeleport) dt++;
         switch (dt) {
             case 0:
                 LandInfo(pl, landId, isOrg);
@@ -2208,7 +2985,7 @@ function ManageLand(player, landId, isOrg = false) {
                 LandEventsManage(pl, landId, isOrg);
                 break;
             case 3:
-                LnadTeleportManage(pl, landId, isOrg);
+                LandTeleportManage(pl, landId, isOrg);
                 break;
             case 4:
                 PermissionManageEntry(pl, landId, isOrg);
@@ -2251,7 +3028,28 @@ function LandInfo(player, landId, isOrg = false) {
     }
     let fm = mc.newSimpleForm();
     fm.setTitle(i18n.$t("manage.info.title"));
-    fm.setContent(i18n.$t("manage.info.desp", [landId, String(landData.range.min_position), String(landData.range.max_position), landData.range.dimid, isOrg ? i18n.$t("this.manage.choose.org") : i18n.$t("this.manage.choose.pri"), isOrg ? orgAPI.getOrgName(landData.settings.owner) || i18n.$t("manage.info.noOrg") : data.xuid2name(landData.settings.owner), landData.settings.describe || i18n.$t("manage.info.noDesp"), landData.range.type2D ? i18n.$t("common.YES") : i18n.$t("common.NO"), landData.teleport.length === 0 ? i18n.$t("manage.info.noDesp") : String(landData.teleport)]));
+    fm.setContent(
+        i18n.$t("manage.info.desp", [
+            landId,
+            String(landData.range.min_position),
+            String(landData.range.max_position),
+            landData.range.dimid,
+            isOrg
+                ? i18n.$t("this.manage.choose.org")
+                : i18n.$t("this.manage.choose.pri"),
+            isOrg
+                ? orgAPI.getOrgName(landData.settings.owner) ||
+                  i18n.$t("manage.info.noOrg")
+                : data.xuid2name(landData.settings.owner),
+            landData.settings.describe || i18n.$t("manage.info.noDesp"),
+            landData.range.type2D
+                ? i18n.$t("common.YES")
+                : i18n.$t("common.NO"),
+            landData.teleport.length === 0
+                ? i18n.$t("manage.info.noDesp")
+                : String(landData.teleport),
+        ])
+    );
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             ManageLand(pl, landId, isOrg);
@@ -2275,10 +3073,23 @@ function LandIdentification(player, landId, isOrg = false) {
     let fm = mc.newCustomForm();
     fm.setTitle(i18n.$t("manage.idf.title"));
     fm.addInput(i18n.$t("manage.idf.name"), "...", landData.settings.name);
-    fm.addInput(i18n.$t("manage.idf.describe"), "...", landData.settings.describe);
-    fm.addSwitch(i18n.$t("manage.idf.notifyItemBar"), !!landData.settings.notifyItemBar);
-    fm.addSwitch(i18n.$t("manage.idf.notifytoPlayer"), !!landData.settings.notifytoPlayer);
-    fm.addSwitch(i18n.$t("manage.idf.notifytoOwner"), !!landData.settings.notifytoOwner);
+    fm.addInput(
+        i18n.$t("manage.idf.describe"),
+        "...",
+        landData.settings.describe
+    );
+    fm.addSwitch(
+        i18n.$t("manage.idf.notifyItemBar"),
+        !!landData.settings.notifyItemBar
+    );
+    fm.addSwitch(
+        i18n.$t("manage.idf.notifytoPlayer"),
+        !!landData.settings.notifytoPlayer
+    );
+    fm.addSwitch(
+        i18n.$t("manage.idf.notifytoOwner"),
+        !!landData.settings.notifytoOwner
+    );
     fm.addSwitch(i18n.$t("manage.idf.drawCube"), !!landData.settings.drawCube);
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
@@ -2286,7 +3097,10 @@ function LandIdentification(player, landId, isOrg = false) {
             return;
         }
         if (dt[0] === "") {
-            let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.idf.title")).setContent(i18n.$t("manage.idf.NamenoEmpty"));
+            let fm = mc
+                .newSimpleForm()
+                .setTitle(i18n.$t("manage.idf.title"))
+                .setContent(i18n.$t("manage.idf.NamenoEmpty"));
             player.sendForm(fm, (pl, dt) => {
                 LandIdentification(pl, landId, isOrg);
             });
@@ -2306,7 +3120,10 @@ function LandIdentification(player, landId, isOrg = false) {
             pLandDataInterface.data[landId].settings = landData.settings;
             pLandDataInterface.save();
         }
-        let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.idf.title")).setContent(i18n.$t("manage.idf.success"));
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("manage.idf.title"))
+            .setContent(i18n.$t("manage.idf.success"));
         player.sendForm(fm, (pl, dt) => {
             ManageLand(pl, landId, isOrg);
         });
@@ -2331,13 +3148,31 @@ function LandEventsManage(player, landId, isOrg = false) {
     }
     let fm = mc.newCustomForm();
     fm.setTitle(i18n.$t("manage.event.title"));
-    fm.addSwitch(i18n.$t("manage.event.pistonPush"), !!landData.events.pistonPush);
-    fm.addSwitch(i18n.$t("manage.event.fireSpread"), !!landData.events.fireSpread);
+    fm.addSwitch(
+        i18n.$t("manage.event.pistonPush"),
+        !!landData.events.pistonPush
+    );
+    fm.addSwitch(
+        i18n.$t("manage.event.fireSpread"),
+        !!landData.events.fireSpread
+    );
     fm.addSwitch(i18n.$t("manage.event.explode"), !!landData.events.explode);
-    fm.addSwitch(i18n.$t("manage.event.redstoneUpdate"), !!landData.events.redstoneUpdate);
-    fm.addSwitch(i18n.$t("manage.event.farmlandDecay"), !!landData.events.farmlandDecay);
-    fm.addSwitch(i18n.$t("manage.event.liquidFlow"), !!landData.events.liquidFlow);
-    fm.addSwitch(i18n.$t("manage.event.blockChange"), !!landData.events.blockChange);
+    fm.addSwitch(
+        i18n.$t("manage.event.redstoneUpdate"),
+        !!landData.events.redstoneUpdate
+    );
+    fm.addSwitch(
+        i18n.$t("manage.event.farmlandDecay"),
+        !!landData.events.farmlandDecay
+    );
+    fm.addSwitch(
+        i18n.$t("manage.event.liquidFlow"),
+        !!landData.events.liquidFlow
+    );
+    fm.addSwitch(
+        i18n.$t("manage.event.blockChange"),
+        !!landData.events.blockChange
+    );
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             ManageLand(pl, landId, isOrg);
@@ -2357,7 +3192,10 @@ function LandEventsManage(player, landId, isOrg = false) {
             pLandDataInterface.data[landId].events = landData.events;
             pLandDataInterface.save();
         }
-        let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.event.title")).setContent(i18n.$t("manage.idf.success"));
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("manage.event.title"))
+            .setContent(i18n.$t("manage.idf.success"));
         player.sendForm(fm, (pl, dt) => {
             ManageLand(pl, landId, isOrg);
         });
@@ -2369,7 +3207,7 @@ function LandEventsManage(player, landId, isOrg = false) {
  * @param {string} landId
  * @param {boolean} isOrg
  */
-function LnadTeleportManage(player, landId, isOrg = false) {
+function LandTeleportManage(player, landId, isOrg = false) {
     /**
      * @type {landData}
      */
@@ -2380,14 +3218,26 @@ function LnadTeleportManage(player, landId, isOrg = false) {
         landData = pLandDataInterface.data[landId];
     }
     let fm = mc.newSimpleForm();
-    let enable = configAPI.data.operator.includes(player.xuid) || configAPI.data.common.allowLandTeleport;
+    let enable =
+        configAPI.data.operator.includes(player.xuid) ||
+        configAPI.data.common.allowLandTeleport;
     fm.setTitle(i18n.$t("manage.teleport.title"));
-    fm.setContent(enable ? i18n.$t("manage.teleport.desp", [String(landData.teleport)]) : i18n.$t("manage.teleport.noEnable"));
+    fm.setContent(
+        enable
+            ? i18n.$t("manage.teleport.desp", [String(landData.teleport)])
+            : i18n.$t("manage.teleport.noEnable")
+    );
     if (enable && landData.teleport.length === 0) {
         //允许设置
-        fm.addButton(i18n.$t("manage.teleport.set"), "textures/items/chorus_fruit");
+        fm.addButton(
+            i18n.$t("manage.teleport.set"),
+            "textures/items/chorus_fruit"
+        );
     } else if (enable) {
-        fm.addButton(i18n.$t("manage.teleport.clear"), "textures/items/chorus_fruit");
+        fm.addButton(
+            i18n.$t("manage.teleport.clear"),
+            "textures/items/chorus_fruit"
+        );
     }
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
@@ -2404,31 +3254,65 @@ function LnadTeleportManage(player, landId, isOrg = false) {
                     pLandDataInterface.data[landId].teleport = [];
                     pLandDataInterface.save();
                 }
-                let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.teleport.title")).setContent(i18n.$t("manage.teleport.clearSuccess"));
+                let fm = mc
+                    .newSimpleForm()
+                    .setTitle(i18n.$t("manage.teleport.title"))
+                    .setContent(i18n.$t("manage.teleport.clearSuccess"));
                 player.sendForm(fm, (pl, dt) => {
-                    LnadTeleportManage(pl, landId, isOrg);
+                    LandTeleportManage(pl, landId, isOrg);
                 });
                 return;
             } else {
                 let pos = player.blockPos;
-                if ((isOrg && !OlandDataInterface.isPosInLand(pos.x, pos.y, pos.z, pos.dimid, landId)) || (!isOrg && !pLandDataInterface.isPosInLand(pos.x, pos.y, pos.z, pos.dimid, landId))) {
+                if (
+                    (isOrg &&
+                        !OlandDataInterface.isPosInLand(
+                            pos.x,
+                            pos.y,
+                            pos.z,
+                            pos.dimid,
+                            landId
+                        )) ||
+                    (!isOrg &&
+                        !pLandDataInterface.isPosInLand(
+                            pos.x,
+                            pos.y,
+                            pos.z,
+                            pos.dimid,
+                            landId
+                        ))
+                ) {
                     //不在地里
-                    let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.teleport.title")).setContent(i18n.$t("manage.teleport.clearSuccess"));
+                    let fm = mc
+                        .newSimpleForm()
+                        .setTitle(i18n.$t("manage.teleport.title"))
+                        .setContent(i18n.$t("manage.teleport.clearSuccess"));
                     player.sendForm(fm, (pl, dt) => {
-                        LnadTeleportManage(pl, landId, isOrg);
+                        LandTeleportManage(pl, landId, isOrg);
                     });
                     return;
                 }
                 if (isOrg) {
-                    OlandDataInterface.data[landId].teleport = [pos.x, pos.y, pos.z];
+                    OlandDataInterface.data[landId].teleport = [
+                        pos.x,
+                        pos.y,
+                        pos.z,
+                    ];
                     OlandDataInterface.save();
                 } else {
-                    pLandDataInterface.data[landId].teleport = [pos.x, pos.y, pos.z];
+                    pLandDataInterface.data[landId].teleport = [
+                        pos.x,
+                        pos.y,
+                        pos.z,
+                    ];
                     pLandDataInterface.save();
                 }
-                let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.teleport.title")).setContent(i18n.$t("manage.idf.success"));
+                let fm = mc
+                    .newSimpleForm()
+                    .setTitle(i18n.$t("manage.teleport.title"))
+                    .setContent(i18n.$t("manage.idf.success"));
                 player.sendForm(fm, (pl, dt) => {
-                    LnadTeleportManage(pl, landId, isOrg);
+                    LandTeleportManage(pl, landId, isOrg);
                 });
                 return;
             }
@@ -2454,13 +3338,35 @@ function PermissionManageEntry(player, landId, isOrg = false) {
     }
     let fm = mc.newSimpleForm();
     fm.setTitle(i18n.$t("manage.permission.main.title"));
-    fm.addButton(i18n.$t("manage.permission.main.blocks"), "textures/ui/icon_recipe_nature");
-    fm.addButton(i18n.$t("manage.permission.main.entity"), "textures/ui/icon_deals");
-    fm.addButton(i18n.$t("manage.permission.main.container"), "textures/ui/inventory_icon");
-    fm.addButton(i18n.$t("manage.permission.main.redStone"), "textures/items/redstone_dust");
-    fm.addButton(i18n.$t("manage.permission.main.tools"), "textures/ui/icon_recipe_equipment");
-    fm.addButton(i18n.$t("manage.permission.main.player"), "textures/ui/icon_armor");
-    isOrg && fm.addButton(i18n.$t("manage.permission.main.organization"), "textures/ui/lan_icon");
+    fm.addButton(
+        i18n.$t("manage.permission.main.blocks"),
+        "textures/ui/icon_recipe_nature"
+    );
+    fm.addButton(
+        i18n.$t("manage.permission.main.entity"),
+        "textures/ui/icon_deals"
+    );
+    fm.addButton(
+        i18n.$t("manage.permission.main.container"),
+        "textures/ui/inventory_icon"
+    );
+    fm.addButton(
+        i18n.$t("manage.permission.main.redStone"),
+        "textures/items/redstone_dust"
+    );
+    fm.addButton(
+        i18n.$t("manage.permission.main.tools"),
+        "textures/ui/icon_recipe_equipment"
+    );
+    fm.addButton(
+        i18n.$t("manage.permission.main.player"),
+        "textures/ui/icon_armor"
+    );
+    isOrg &&
+        fm.addButton(
+            i18n.$t("manage.permission.main.organization"),
+            "textures/ui/lan_icon"
+        );
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             ManageLand(pl, landId, isOrg);
@@ -2511,13 +3417,34 @@ function BlockPermissionManage(player, landId, isOrg = false) {
     }
     let fm = mc.newCustomForm();
     fm.setTitle(i18n.$t("manage.permission.blocks.title"));
-    fm.addSwitch(i18n.$t("manage.permission.blocks.blockPlace"), !!landData.permissions.blocks.blockPlace);
-    fm.addSwitch(i18n.$t("manage.permission.blocks.blockDestory"), !!landData.permissions.blocks.blockDestory);
-    fm.addSwitch(i18n.$t("manage.permission.blocks.itemDrop"), !!landData.permissions.blocks.itemDrop);
-    fm.addSwitch(i18n.$t("manage.permission.blocks.itemPickUp"), !!landData.permissions.blocks.itemPickUp);
-    fm.addSwitch(i18n.$t("manage.permission.blocks.openDoor"), !!landData.permissions.blocks.openDoor);
-    fm.addSwitch(i18n.$t("manage.permission.blocks.useFenceGate"), !!landData.permissions.blocks.useFenceGate);
-    fm.addSwitch(i18n.$t("manage.permission.blocks.useTrapdoor"), !!landData.permissions.blocks.useTrapdoor);
+    fm.addSwitch(
+        i18n.$t("manage.permission.blocks.blockPlace"),
+        !!landData.permissions.blocks.blockPlace
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.blocks.blockDestory"),
+        !!landData.permissions.blocks.blockDestory
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.blocks.itemDrop"),
+        !!landData.permissions.blocks.itemDrop
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.blocks.itemPickUp"),
+        !!landData.permissions.blocks.itemPickUp
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.blocks.openDoor"),
+        !!landData.permissions.blocks.openDoor
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.blocks.useFenceGate"),
+        !!landData.permissions.blocks.useFenceGate
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.blocks.useTrapdoor"),
+        !!landData.permissions.blocks.useTrapdoor
+    );
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             PermissionManageEntry(pl, landId, isOrg);
@@ -2537,7 +3464,10 @@ function BlockPermissionManage(player, landId, isOrg = false) {
             pLandDataInterface.data[landId].permissions = landData.permissions;
             pLandDataInterface.save();
         }
-        let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.permission.blocks.title")).setContent(i18n.$t("manage.idf.success"));
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("manage.permission.blocks.title"))
+            .setContent(i18n.$t("manage.idf.success"));
         player.sendForm(fm, (pl, dt) => {
             PermissionManageEntry(pl, landId, isOrg);
         });
@@ -2562,14 +3492,38 @@ function EntityPermissionManage(player, landId, isOrg = false) {
     }
     let fm = mc.newCustomForm();
     fm.setTitle(i18n.$t("manage.permission.entity.title"));
-    fm.addSwitch(i18n.$t("manage.permission.entity.allowRideEntity"), !!landData.permissions.entity.allowRideEntity);
-    fm.addSwitch(i18n.$t("manage.permission.entity.allowUseBoat"), !!landData.permissions.entity.allowUseBoat);
-    fm.addSwitch(i18n.$t("manage.permission.entity.allowUseMinecart"), !!landData.permissions.entity.allowUseMinecart);
-    fm.addSwitch(i18n.$t("manage.permission.entity.allowShoot"), !!landData.permissions.entity.allowShoot);
-    fm.addSwitch(i18n.$t("manage.permission.entity.allowAttackEntity"), !!landData.permissions.entity.allowAttackEntity);
-    fm.addSwitch(i18n.$t("manage.permission.entity.allowMobSpawn"), !!landData.permissions.entity.allowMobSpawn);
-    fm.addSwitch(i18n.$t("manage.permission.entity.allowNeutralSpawn"), !!landData.permissions.entity.allowNeutralSpawn);
-    fm.addSwitch(i18n.$t("manage.permission.entity.allowAnimalSpawn"), !!landData.permissions.entity.allowAnimalSpawn);
+    fm.addSwitch(
+        i18n.$t("manage.permission.entity.allowRideEntity"),
+        !!landData.permissions.entity.allowRideEntity
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.entity.allowUseBoat"),
+        !!landData.permissions.entity.allowUseBoat
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.entity.allowUseMinecart"),
+        !!landData.permissions.entity.allowUseMinecart
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.entity.allowShoot"),
+        !!landData.permissions.entity.allowShoot
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.entity.allowAttackEntity"),
+        !!landData.permissions.entity.allowAttackEntity
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.entity.allowMobSpawn"),
+        !!landData.permissions.entity.allowMobSpawn
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.entity.allowNeutralSpawn"),
+        !!landData.permissions.entity.allowNeutralSpawn
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.entity.allowAnimalSpawn"),
+        !!landData.permissions.entity.allowAnimalSpawn
+    );
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             PermissionManageEntry(pl, landId, isOrg);
@@ -2590,7 +3544,10 @@ function EntityPermissionManage(player, landId, isOrg = false) {
             pLandDataInterface.data[landId].permissions = landData.permissions;
             pLandDataInterface.save();
         }
-        let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.permission.blocks.title")).setContent(i18n.$t("manage.idf.success"));
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("manage.permission.blocks.title"))
+            .setContent(i18n.$t("manage.idf.success"));
         player.sendForm(fm, (pl, dt) => {
             PermissionManageEntry(pl, landId, isOrg);
         });
@@ -2615,11 +3572,26 @@ function ContainerPermissionManage(player, landId, isOrg = false) {
     }
     let fm = mc.newCustomForm();
     fm.setTitle(i18n.$t("manage.permission.container.title"));
-    fm.addSwitch(i18n.$t("manage.permission.container.useFrameBlock"), !!landData.permissions.container.useFrameBlock);
-    fm.addSwitch(i18n.$t("manage.permission.container.openShulkerBox"), !!landData.permissions.container.openShulkerBox);
-    fm.addSwitch(i18n.$t("manage.permission.container.openChest"), !!landData.permissions.container.openChest);
-    fm.addSwitch(i18n.$t("manage.permission.container.openBarrel"), !!landData.permissions.container.openBarrel);
-    fm.addSwitch(i18n.$t("manage.permission.container.openHopper"), !!landData.permissions.container.openHopper);
+    fm.addSwitch(
+        i18n.$t("manage.permission.container.useFrameBlock"),
+        !!landData.permissions.container.useFrameBlock
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.container.openShulkerBox"),
+        !!landData.permissions.container.openShulkerBox
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.container.openChest"),
+        !!landData.permissions.container.openChest
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.container.openBarrel"),
+        !!landData.permissions.container.openBarrel
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.container.openHopper"),
+        !!landData.permissions.container.openHopper
+    );
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             PermissionManageEntry(pl, landId, isOrg);
@@ -2637,7 +3609,10 @@ function ContainerPermissionManage(player, landId, isOrg = false) {
             pLandDataInterface.data[landId].permissions = landData.permissions;
             pLandDataInterface.save();
         }
-        let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.permission.container.title")).setContent(i18n.$t("manage.idf.success"));
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("manage.permission.container.title"))
+            .setContent(i18n.$t("manage.idf.success"));
         player.sendForm(fm, (pl, dt) => {
             PermissionManageEntry(pl, landId, isOrg);
         });
@@ -2662,16 +3637,46 @@ function RedstonePermissionManage(player, landId, isOrg = false) {
     }
     let fm = mc.newCustomForm();
     fm.setTitle(i18n.$t("manage.permission.redStone.title"));
-    fm.addSwitch(i18n.$t("manage.permission.redStone.pressButton"), !!landData.permissions.redStone.pressButton);
-    fm.addSwitch(i18n.$t("manage.permission.redStone.useLever"), !!landData.permissions.redStone.useLever);
-    fm.addSwitch(i18n.$t("manage.permission.redStone.useDispenser"), !!landData.permissions.redStone.useDispenser);
-    fm.addSwitch(i18n.$t("manage.permission.redStone.useDropper"), !!landData.permissions.redStone.useDropper);
-    fm.addSwitch(i18n.$t("manage.permission.redStone.usePressurePlate"), !!landData.permissions.redStone.usePressurePlate);
-    fm.addSwitch(i18n.$t("manage.permission.redStone.useDaylightDetector"), !!landData.permissions.redStone.useDaylightDetector);
-    fm.addSwitch(i18n.$t("manage.permission.redStone.changeComparator"), !!landData.permissions.redStone.changeComparator);
-    fm.addSwitch(i18n.$t("manage.permission.redStone.changeRepeater"), !!landData.permissions.redStone.changeRepeater);
-    fm.addSwitch(i18n.$t("manage.permission.redStone.HopperChange"), !!landData.permissions.redStone.HopperChange);
-    fm.addSwitch(i18n.$t("manage.permission.redStone.pistonPush"), !!landData.permissions.redStone.pistonPush);
+    fm.addSwitch(
+        i18n.$t("manage.permission.redStone.pressButton"),
+        !!landData.permissions.redStone.pressButton
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.redStone.useLever"),
+        !!landData.permissions.redStone.useLever
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.redStone.useDispenser"),
+        !!landData.permissions.redStone.useDispenser
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.redStone.useDropper"),
+        !!landData.permissions.redStone.useDropper
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.redStone.usePressurePlate"),
+        !!landData.permissions.redStone.usePressurePlate
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.redStone.useDaylightDetector"),
+        !!landData.permissions.redStone.useDaylightDetector
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.redStone.changeComparator"),
+        !!landData.permissions.redStone.changeComparator
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.redStone.changeRepeater"),
+        !!landData.permissions.redStone.changeRepeater
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.redStone.HopperChange"),
+        !!landData.permissions.redStone.HopperChange
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.redStone.pistonPush"),
+        !!landData.permissions.redStone.pistonPush
+    );
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             PermissionManageEntry(pl, landId, isOrg);
@@ -2694,7 +3699,10 @@ function RedstonePermissionManage(player, landId, isOrg = false) {
             pLandDataInterface.data[landId].permissions = landData.permissions;
             pLandDataInterface.save();
         }
-        let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.permission.redStone.title")).setContent(i18n.$t("manage.idf.success"));
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("manage.permission.redStone.title"))
+            .setContent(i18n.$t("manage.idf.success"));
         player.sendForm(fm, (pl, dt) => {
             PermissionManageEntry(pl, landId, isOrg);
         });
@@ -2719,31 +3727,106 @@ function ToolsPermissionManage(player, landId, isOrg = false) {
     }
     let fm = mc.newCustomForm();
     fm.setTitle(i18n.$t("manage.permission.tools.title"));
-    fm.addSwitch(i18n.$t("manage.permission.tools.useBell"), !!landData.permissions.tools.useBell);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useLoom"), !!landData.permissions.tools.useLoom);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useJukebox"), !!landData.permissions.tools.useJukebox);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useBeacon"), !!landData.permissions.tools.useBeacon);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useCraftingTable"), !!landData.permissions.tools.useCraftingTable);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useCartographyTable"), !!landData.permissions.tools.useCartographyTable);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useAnvil"), !!landData.permissions.tools.useAnvil);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useBucket"), !!landData.permissions.tools.useBucket);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useBed"), !!landData.permissions.tools.useBed);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useBlastFurnace"), !!landData.permissions.tools.useBlastFurnace);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useComposter"), !!landData.permissions.tools.useComposter);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useFurnace"), !!landData.permissions.tools.useFurnace);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useGrindstone"), !!landData.permissions.tools.useGrindstone);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useRespawnAnchor"), !!landData.permissions.tools.useRespawnAnchor);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useSmithingTable"), !!landData.permissions.tools.useSmithingTable);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useNoteBlock"), !!landData.permissions.tools.useNoteBlock);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useArmorStand"), !!landData.permissions.tools.useArmorStand);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useLectern"), !!landData.permissions.tools.useLectern);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useCampfire"), !!landData.permissions.tools.useCampfire);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useSmoker"), !!landData.permissions.tools.useSmoker);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useBrewingStand"), !!landData.permissions.tools.useBrewingStand);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useEnchantingTable"), !!landData.permissions.tools.useEnchantingTable);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useFlint"), !!landData.permissions.tools.useFlint);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useCauldron"), !!landData.permissions.tools.useCauldron);
-    fm.addSwitch(i18n.$t("manage.permission.tools.useStonecutter"), !!landData.permissions.tools.useStonecutter);
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useBell"),
+        !!landData.permissions.tools.useBell
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useLoom"),
+        !!landData.permissions.tools.useLoom
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useJukebox"),
+        !!landData.permissions.tools.useJukebox
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useBeacon"),
+        !!landData.permissions.tools.useBeacon
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useCraftingTable"),
+        !!landData.permissions.tools.useCraftingTable
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useCartographyTable"),
+        !!landData.permissions.tools.useCartographyTable
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useAnvil"),
+        !!landData.permissions.tools.useAnvil
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useBucket"),
+        !!landData.permissions.tools.useBucket
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useBed"),
+        !!landData.permissions.tools.useBed
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useBlastFurnace"),
+        !!landData.permissions.tools.useBlastFurnace
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useComposter"),
+        !!landData.permissions.tools.useComposter
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useFurnace"),
+        !!landData.permissions.tools.useFurnace
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useGrindstone"),
+        !!landData.permissions.tools.useGrindstone
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useRespawnAnchor"),
+        !!landData.permissions.tools.useRespawnAnchor
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useSmithingTable"),
+        !!landData.permissions.tools.useSmithingTable
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useNoteBlock"),
+        !!landData.permissions.tools.useNoteBlock
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useArmorStand"),
+        !!landData.permissions.tools.useArmorStand
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useLectern"),
+        !!landData.permissions.tools.useLectern
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useCampfire"),
+        !!landData.permissions.tools.useCampfire
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useSmoker"),
+        !!landData.permissions.tools.useSmoker
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useBrewingStand"),
+        !!landData.permissions.tools.useBrewingStand
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useEnchantingTable"),
+        !!landData.permissions.tools.useEnchantingTable
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useFlint"),
+        !!landData.permissions.tools.useFlint
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useCauldron"),
+        !!landData.permissions.tools.useCauldron
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.tools.useStonecutter"),
+        !!landData.permissions.tools.useStonecutter
+    );
 
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
@@ -2783,7 +3866,10 @@ function ToolsPermissionManage(player, landId, isOrg = false) {
             pLandDataInterface.data[landId].permissions = landData.permissions;
             pLandDataInterface.save();
         }
-        let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.permission.tools.title")).setContent(i18n.$t("manage.idf.success"));
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("manage.permission.tools.title"))
+            .setContent(i18n.$t("manage.idf.success"));
         player.sendForm(fm, (pl, dt) => {
             PermissionManageEntry(pl, landId, isOrg);
         });
@@ -2808,16 +3894,46 @@ function PlayerPermissionManage(player, landId, isOrg = false) {
     }
     let fm = mc.newCustomForm();
     fm.setTitle(i18n.$t("manage.permission.player.title"));
-    fm.addSwitch(i18n.$t("manage.permission.player.eat"), !!landData.permissions.player.eat);
-    fm.addSwitch(i18n.$t("manage.permission.player.fishing"), !!landData.permissions.player.fishing);
-    fm.addSwitch(i18n.$t("manage.permission.player.allowThrowPotion"), !!landData.permissions.player.allowThrowPotion);
-    fm.addSwitch(i18n.$t("manage.permission.player.allowUseBoat"), !!landData.permissions.player.allowUseBoat);
-    fm.addSwitch(i18n.$t("manage.permission.player.allowUseMinecart"), !!landData.permissions.player.allowUseMinecart);
-    fm.addSwitch(i18n.$t("manage.permission.player.allowShoot"), !!landData.permissions.player.allowShoot);
-    fm.addSwitch(i18n.$t("manage.permission.player.allowAttackAnimal"), !!landData.permissions.player.allowAttackAnimal);
-    fm.addSwitch(i18n.$t("manage.permission.player.allowAttackNeutral"), !!landData.permissions.player.allowAttackNeutral);
-    fm.addSwitch(i18n.$t("manage.permission.player.allowAttackPlayer"), !!landData.permissions.player.allowAttackPlayer);
-    fm.addSwitch(i18n.$t("manage.permission.player.allowAttackMobs"), !!landData.permissions.player.allowAttackMobs);
+    fm.addSwitch(
+        i18n.$t("manage.permission.player.eat"),
+        !!landData.permissions.player.eat
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.player.fishing"),
+        !!landData.permissions.player.fishing
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.player.allowThrowPotion"),
+        !!landData.permissions.player.allowThrowPotion
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.player.allowUseBoat"),
+        !!landData.permissions.player.allowUseBoat
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.player.allowUseMinecart"),
+        !!landData.permissions.player.allowUseMinecart
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.player.allowShoot"),
+        !!landData.permissions.player.allowShoot
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.player.allowAttackAnimal"),
+        !!landData.permissions.player.allowAttackAnimal
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.player.allowAttackNeutral"),
+        !!landData.permissions.player.allowAttackNeutral
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.player.allowAttackPlayer"),
+        !!landData.permissions.player.allowAttackPlayer
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.player.allowAttackMobs"),
+        !!landData.permissions.player.allowAttackMobs
+    );
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             PermissionManageEntry(pl, landId, isOrg);
@@ -2840,7 +3956,10 @@ function PlayerPermissionManage(player, landId, isOrg = false) {
             pLandDataInterface.data[landId].permissions = landData.permissions;
             pLandDataInterface.save();
         }
-        let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.permission.player.title")).setContent(i18n.$t("manage.idf.success"));
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("manage.permission.player.title"))
+            .setContent(i18n.$t("manage.idf.success"));
         player.sendForm(fm, (pl, dt) => {
             PermissionManageEntry(pl, landId, isOrg);
         });
@@ -2860,9 +3979,18 @@ function OrgPermissionManage(player, landId, isOrg = false) {
     let landData = OlandDataInterface.data[landId];
     let fm = mc.newCustomForm();
     fm.setTitle(i18n.$t("manage.permission.organization.title"));
-    fm.addSwitch(i18n.$t("manage.permission.organization.allowOtherEnclose"), !!landData.permissions.organization.allowOtherEnclose);
-    fm.addSwitch(i18n.$t("manage.permission.organization.allowMemberEnclose"), !!landData.permissions.organization.allowMemberEnclose);
-    fm.addSwitch(i18n.$t("manage.permission.organization.trustMembers"), !!landData.permissions.organization.trustMembers);
+    fm.addSwitch(
+        i18n.$t("manage.permission.organization.allowOtherEnclose"),
+        !!landData.permissions.organization.allowOtherEnclose
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.organization.allowMemberEnclose"),
+        !!landData.permissions.organization.allowMemberEnclose
+    );
+    fm.addSwitch(
+        i18n.$t("manage.permission.organization.trustMembers"),
+        !!landData.permissions.organization.trustMembers
+    );
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             PermissionManageEntry(pl, landId, isOrg);
@@ -2878,7 +4006,10 @@ function OrgPermissionManage(player, landId, isOrg = false) {
             pLandDataInterface.data[landId].permissions = landData.permissions;
             pLandDataInterface.save();
         }
-        let fm = mc.newSimpleForm().setTitle(i18n.$t("manage.permission.organization.title")).setContent(i18n.$t("manage.idf.success"));
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("manage.permission.organization.title"))
+            .setContent(i18n.$t("manage.idf.success"));
         player.sendForm(fm, (pl, dt) => {
             PermissionManageEntry(pl, landId, isOrg);
         });
@@ -2901,7 +4032,7 @@ mc.listen(
         logger.debug("onUseItemOn: block" + block.type);
         logger.debug("onUseItemOn item:" + item.type);
 
-        //先要检测land存不存在
+        //先要检测领地存不存在
         /**
          * @type {pos}
          */
@@ -3104,25 +4235,46 @@ mc.listen(
              * @type {string}
              */
             let itemName = block.type;
-            if (itemName.endsWith("door") && !landData.permissions.blocks.openDoor) {
+            if (
+                itemName.endsWith("door") &&
+                !landData.permissions.blocks.openDoor
+            ) {
                 //各类门
                 return false;
-            } else if (itemName.endsWith("fence_gate") && !landData.permissions.blocks.useFenceGate) {
+            } else if (
+                itemName.endsWith("fence_gate") &&
+                !landData.permissions.blocks.useFenceGate
+            ) {
                 //栅栏
                 return false;
-            } else if (itemName.endsWith("trapdoor") && !landData.permissions.blocks.useTrapdoor) {
-                //活扳门
+            } else if (
+                itemName.endsWith("trapdoor") &&
+                !landData.permissions.blocks.useTrapdoor
+            ) {
+                //活板门
                 return false;
-            } else if (itemName.endsWith("button") && !landData.permissions.redStone.pressButton) {
+            } else if (
+                itemName.endsWith("button") &&
+                !landData.permissions.redStone.pressButton
+            ) {
                 //按钮
                 return false;
-            } else if (itemName.endsWith("minecart") && !landData.permissions.blocks.blockPlace) {
+            } else if (
+                itemName.endsWith("minecart") &&
+                !landData.permissions.blocks.blockPlace
+            ) {
                 //矿车
                 return false;
-            } else if (itemName.endsWith("boat") && !landData.permissions.blocks.blockPlace) {
+            } else if (
+                itemName.endsWith("boat") &&
+                !landData.permissions.blocks.blockPlace
+            ) {
                 //船
                 return false;
-            } else if (itemName === "minecraft:painting" && !landData.permissions.blocks.blockPlace) {
+            } else if (
+                itemName === "minecraft:painting" &&
+                !landData.permissions.blocks.blockPlace
+            ) {
                 //画
                 return false;
             }
@@ -3331,25 +4483,46 @@ mc.listen(
              * @type {string}
              */
             let itemName = block.type;
-            if (itemName.endsWith("door") && !landData.permissions.blocks.openDoor) {
+            if (
+                itemName.endsWith("door") &&
+                !landData.permissions.blocks.openDoor
+            ) {
                 //各类门
                 return false;
-            } else if (itemName.endsWith("fence_gate") && !landData.permissions.blocks.useFenceGate) {
+            } else if (
+                itemName.endsWith("fence_gate") &&
+                !landData.permissions.blocks.useFenceGate
+            ) {
                 //栅栏
                 return false;
-            } else if (itemName.endsWith("trapdoor") && !landData.permissions.blocks.useTrapdoor) {
-                //活扳门
+            } else if (
+                itemName.endsWith("trapdoor") &&
+                !landData.permissions.blocks.useTrapdoor
+            ) {
+                //活板门
                 return false;
-            } else if (itemName.endsWith("button") && !landData.permissions.redStone.pressButton) {
+            } else if (
+                itemName.endsWith("button") &&
+                !landData.permissions.redStone.pressButton
+            ) {
                 //按钮
                 return false;
-            } else if (itemName.endsWith("minecart") && !landData.permissions.blocks.blockPlace) {
+            } else if (
+                itemName.endsWith("minecart") &&
+                !landData.permissions.blocks.blockPlace
+            ) {
                 //矿车
                 return false;
-            } else if (itemName.endsWith("boat") && !landData.permissions.blocks.blockPlace) {
+            } else if (
+                itemName.endsWith("boat") &&
+                !landData.permissions.blocks.blockPlace
+            ) {
                 //船
                 return false;
-            } else if (itemName === "minecraft:painting" && !landData.permissions.blocks.blockPlace) {
+            } else if (
+                itemName === "minecraft:painting" &&
+                !landData.permissions.blocks.blockPlace
+            ) {
                 //画
                 return false;
             }
@@ -3368,7 +4541,7 @@ mc.listen(
      */
     function (player, block) {
         logger.debug("onBlockInteracted:" + block.type);
-        //先要检测land存不存在
+        //先要检测领地存不存在
         /**
          * @type {pos}
          */
@@ -3383,6 +4556,186 @@ mc.listen(
             let landData = pLandDataInterface.data[landId];
             if (pLandDataInterface.inTrust(player.xuid, landId)) {
                 logger.debug("onBlockInteracted信任成员，放行行为");
+                //信任成员，放行行为
+                return;
+            }
+            //对各类实用方块进行判断
+            switch (block.type) {
+                case "minecraft:cartography_table":
+                    if (!landData.permissions.tools.useCartographyTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:smithing_table":
+                    if (!landData.permissions.tools.useSmithingTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:smoker":
+                    if (!landData.permissions.tools.useSmoker) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:furnace":
+                    if (!landData.permissions.tools.useFurnace) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:blast_furnace":
+                    if (!landData.permissions.tools.useBlastFurnace) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:brewing_stand":
+                    if (!landData.permissions.tools.useBrewingStand) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:anvil":
+                    if (!landData.permissions.tools.useAnvil) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:beacon":
+                    if (!landData.permissions.tools.useBeacon) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:enchanting_table":
+                    if (!landData.permissions.tools.useEnchantingTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:grindstone":
+                    if (!landData.permissions.tools.useGrindstone) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:loom":
+                    if (!landData.permissions.tools.useLoom) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:stonecutter_block":
+                    if (!landData.permissions.tools.useStonecutter) {
+                        return false;
+                    }
+                    break;
+                default:
+                    break;
+            }
+            //此项以私人领地为优先
+            return;
+        }
+        //是否禁用团队领地
+        if (!enableOrg) {
+            return;
+        }
+        //没有私人领地，看看公会领地
+        landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+        if (landId) {
+            //领地存在，加载领地数据
+            let landData = OlandDataInterface.data[landId];
+            if (OlandDataInterface.inTrust(player.xuid, landId)) {
+                logger.debug("onBlockInteracted信任成员，放行行为");
+                //信任成员，放行行为
+                return;
+            }
+            //对各类实用方块进行判断
+            switch (block.type) {
+                case "minecraft:cartography_table":
+                    if (!landData.permissions.tools.useCartographyTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:smithing_table":
+                    if (!landData.permissions.tools.useSmithingTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:smoker":
+                    if (!landData.permissions.tools.useSmoker) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:furnace":
+                    if (!landData.permissions.tools.useFurnace) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:blast_furnace":
+                    if (!landData.permissions.tools.useBlastFurnace) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:brewing_stand":
+                    if (!landData.permissions.tools.useBrewingStand) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:anvil":
+                    if (!landData.permissions.tools.useAnvil) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:beacon":
+                    if (!landData.permissions.tools.useBeacon) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:enchanting_table":
+                    if (!landData.permissions.tools.useEnchantingTable) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:grindstone":
+                    if (!landData.permissions.tools.useGrindstone) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:loom":
+                    if (!landData.permissions.tools.useLoom) {
+                        return false;
+                    }
+                    break;
+                case "minecraft:stonecutter_block":
+                    if (!landData.permissions.tools.useStonecutter) {
+                        return false;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+);
+mc.listen(
+    "onProjectileHitBlock",
+    /**
+     *
+     *
+     * @param {block} block
+     * @param {entity} source
+     */
+    function (block, source) {
+        logger.debug("onProjectileHitBlock:" + block.type);
+        //先要检测领地存不存在
+        /**
+         * @type {pos}
+         */
+        if (!source || !source.isPlayer()) return;
+        const player = source.isPlayer();
+        if (configAPI.data.operator.includes(player.xuid)) {
+            //管理员
+            return;
+        }
+        let pos = block.pos;
+        let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+        if (landId) {
+            //领地存在，加载领地数据
+            let landData = pLandDataInterface.data[landId];
+            if (pLandDataInterface.inTrust(player.xuid, landId)) {
+                logger.debug("onProjectileHitBlock信任成员，放行行为");
                 //信任成员，放行行为
                 return;
             }
@@ -3551,7 +4904,10 @@ mc.listen("onUseItem", (player, item) => {
             //信任成员，放行行为
             return;
         }
-        if (item.type === "minecraft:bucket" && !landData.permissions.tools.useBucket) {
+        if (
+            item.type === "minecraft:bucket" &&
+            !landData.permissions.tools.useBucket
+        ) {
             return false;
         }
         return;
@@ -3564,7 +4920,10 @@ mc.listen("onUseItem", (player, item) => {
             //信任成员，放行行为
             return;
         }
-        if (item.type === "minecraft:bucket" && !landData.permissions.tools.useBucket) {
+        if (
+            item.type === "minecraft:bucket" &&
+            !landData.permissions.tools.useBucket
+        ) {
             return false;
         }
         return;
@@ -3588,22 +4947,40 @@ mc.listen("onOpenContainer", (player, block) => {
             //信任成员，放行行为
             return;
         }
-        if (blockName === "minecraft:dispenser" && !landData.permissions.redStone.useDispenser) {
+        if (
+            blockName === "minecraft:dispenser" &&
+            !landData.permissions.redStone.useDispenser
+        ) {
             return false;
         }
-        if (blockName === "minecraft:dropper" && !landData.permissions.redStone.useDropper) {
+        if (
+            blockName === "minecraft:dropper" &&
+            !landData.permissions.redStone.useDropper
+        ) {
             return false;
         }
-        if (blockName === "minecraft:hopper" && !landData.permissions.container.openHopper) {
+        if (
+            blockName === "minecraft:hopper" &&
+            !landData.permissions.container.openHopper
+        ) {
             return false;
         }
-        if (blockName === "minecraft:barrel" && !landData.permissions.container.openBarrel) {
+        if (
+            blockName === "minecraft:barrel" &&
+            !landData.permissions.container.openBarrel
+        ) {
             return false;
         }
-        if (blockName.endsWith("shulker_box") && !landData.permissions.container.openShulkerBox) {
+        if (
+            blockName.endsWith("shulker_box") &&
+            !landData.permissions.container.openShulkerBox
+        ) {
             return false;
         }
-        if (blockName.endsWith("chest") && !landData.permissions.container.openShulkerBox) {
+        if (
+            blockName.endsWith("chest") &&
+            !landData.permissions.container.openShulkerBox
+        ) {
             return false;
         }
         return;
@@ -3620,38 +4997,60 @@ mc.listen("onOpenContainer", (player, block) => {
             //信任成员，放行行为
             return;
         }
-        if (blockName === "minecraft:dispenser" && !landData.permissions.redStone.useDispenser) {
+        if (
+            blockName === "minecraft:dispenser" &&
+            !landData.permissions.redStone.useDispenser
+        ) {
             return false;
         }
-        if (blockName === "minecraft:dropper" && !landData.permissions.redStone.useDropper) {
+        if (
+            blockName === "minecraft:dropper" &&
+            !landData.permissions.redStone.useDropper
+        ) {
             return false;
         }
-        if (blockName === "minecraft:hopper" && !landData.permissions.container.openHopper) {
+        if (
+            blockName === "minecraft:hopper" &&
+            !landData.permissions.container.openHopper
+        ) {
             return false;
         }
-        if (blockName === "minecraft:barrel" && !landData.permissions.container.openBarrel) {
+        if (
+            blockName === "minecraft:barrel" &&
+            !landData.permissions.container.openBarrel
+        ) {
             return false;
         }
-        if (blockName.endsWith("shulker_box") && !landData.permissions.container.openShulkerBox) {
+        if (
+            blockName.endsWith("shulker_box") &&
+            !landData.permissions.container.openShulkerBox
+        ) {
             return false;
         }
-        if (blockName.endsWith("chest") && !landData.permissions.container.openShulkerBox) {
+        if (
+            blockName.endsWith("chest") &&
+            !landData.permissions.container.openShulkerBox
+        ) {
             return false;
         }
         return;
     }
 });
 
-//这玩意貌似没有用
-/**
- * @todo https://github.com/LiteLDev/LiteLoaderBDS/issues/350
- */
 mc.listen("onStepOnPressurePlate", (entity, block) => {
     let pos = block.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
+        if (
+            entity.isPlayer() &&
+            OlandDataInterface.inTrust(entity.toPlayer().xuid, landId)
+        ) {
+            logger.debug("onStepOnPressurePlate信任放行");
+            //信任成员，放行行为
+            return;
+        }
         let landData = pLandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.usePressurePlate) {
             return false;
         }
@@ -3663,7 +5062,7 @@ mc.listen("onStepOnPressurePlate", (entity, block) => {
     landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = OlandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.usePressurePlate) {
             return false;
         }
@@ -3676,7 +5075,7 @@ mc.listen("onHopperSearchItem", (pos, isMinecart) => {
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = pLandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.HopperChange) {
             return false;
         }
@@ -3688,7 +5087,7 @@ mc.listen("onHopperSearchItem", (pos, isMinecart) => {
     landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = OlandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.HopperChange) {
             return false;
         }
@@ -3701,7 +5100,7 @@ mc.listen("onHopperPushOut", (pos) => {
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = pLandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.HopperChange) {
             return false;
         }
@@ -3713,7 +5112,7 @@ mc.listen("onHopperPushOut", (pos) => {
     landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = OlandDataInterface.data[landId];
-        //踩压力板没什么赦免的
+        //没什么赦免的
         if (!landData.permissions.redStone.HopperChange) {
             return false;
         }
@@ -3869,7 +5268,7 @@ mc.listen("onTakeItem", (player, entity, item) => {
             return;
         }
         let landData = pLandDataInterface.data[landId];
-        if (!landData.permissions.blocks.itemDrop) {
+        if (!landData.permissions.blocks.itemPickUp) {
             return false;
         }
         return;
@@ -3883,7 +5282,41 @@ mc.listen("onTakeItem", (player, entity, item) => {
             return;
         }
         let landData = OlandDataInterface.data[landId];
-        if (!landData.permissions.blocks.itemDrop) {
+        if (!landData.permissions.blocks.itemPickUp) {
+            return false;
+        }
+        return;
+    }
+});
+
+//获得经验
+mc.listen("onExperienceAdd", (player, exp) => {
+    if (configAPI.data.operator.includes(player.xuid)) {
+        //管理员
+        return;
+    }
+    let pos = player.pos;
+    let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+    if (landId) {
+        if (pLandDataInterface.inTrust(player.xuid, landId)) {
+            return;
+        }
+        let landData = pLandDataInterface.data[landId];
+        if (!landData.permissions.blocks.itemPickUp) {
+            return false;
+        }
+        return;
+    }
+    if (!enableOrg) {
+        return;
+    }
+    landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+    if (landId) {
+        if (OlandDataInterface.inTrust(player.xuid, landId)) {
+            return;
+        }
+        let landData = OlandDataInterface.data[landId];
+        if (!landData.permissions.blocks.itemPickUp) {
             return false;
         }
         return;
@@ -3892,18 +5325,115 @@ mc.listen("onTakeItem", (player, entity, item) => {
 
 //实体分类
 const entityDB = {
-    blockType: ["minecraft:ender_crystal", "minecraft:painting", "minecraft:boat", "minecraft:chest_minecart", "minecraft:minecart", "minecraft:hopper_minecart", "minecraft:hopper_minecart", "minecraft:tnt_minecart"], //像物品的
-    peaceful: ["minecraft:axolotl", "minecraft:bat", "minecraft:cat", "minecraft:chicken", "minecraft:cod", "minecraft:cow", "minecraft:donkey", "minecraft:fox", "minecraft:glow_squid", "minecraft:horse", "minecraft:mooshroom", "minecraft:mule", "minecraft:ocelot", "minecraft:parrot", "minecraft:pig", "minecraft:rabbit", "minecraft:salmon", "minecraft:snow_golem", "minecraft:sheep", "minecraft:skeleton_horse", "minecraft:squid", "minecraft:strider", "minecraft:tropical_fish", "minecraft:turtle", "minecraft:villager_v2", "minecraft:wandering_trader", "minecraft:npc"],
+    blockType: [
+        "minecraft:ender_crystal",
+        "minecraft:painting",
+        "minecraft:boat",
+        "minecraft:chest_minecart",
+        "minecraft:minecart",
+        "minecraft:hopper_minecart",
+        "minecraft:hopper_minecart",
+        "minecraft:tnt_minecart",
+    ], //像物品的
+    peaceful: [
+        "minecraft:axolotl",
+        "minecraft:bat",
+        "minecraft:cat",
+        "minecraft:chicken",
+        "minecraft:cod",
+        "minecraft:cow",
+        "minecraft:donkey",
+        "minecraft:fox",
+        "minecraft:glow_squid",
+        "minecraft:horse",
+        "minecraft:mooshroom",
+        "minecraft:mule",
+        "minecraft:ocelot",
+        "minecraft:parrot",
+        "minecraft:pig",
+        "minecraft:rabbit",
+        "minecraft:salmon",
+        "minecraft:snow_golem",
+        "minecraft:sheep",
+        "minecraft:skeleton_horse",
+        "minecraft:squid",
+        "minecraft:strider",
+        "minecraft:tropical_fish",
+        "minecraft:turtle",
+        "minecraft:villager_v2",
+        "minecraft:wandering_trader",
+        "minecraft:npc",
+    ],
 
-    neutral: ["minecraft:pufferfish", "minecraft:bee", "minecraft:dolphin", "minecraft:goat", "minecraft:iron_golem", "minecraft:llama", "minecraft:llama_spit", "minecraft:wolf", "minecraft:panda", "minecraft:polar_bear", "minecraft:enderman", "minecraft:piglin", "minecraft:zombie_pigman"],
+    neutral: [
+        "minecraft:pufferfish",
+        "minecraft:bee",
+        "minecraft:dolphin",
+        "minecraft:goat",
+        "minecraft:iron_golem",
+        "minecraft:llama",
+        "minecraft:llama_spit",
+        "minecraft:wolf",
+        "minecraft:panda",
+        "minecraft:polar_bear",
+        "minecraft:enderman",
+        "minecraft:piglin",
+        "minecraft:zombie_pigman",
+    ],
 
-    mob: ["minecraft:blaze", "minecraft:small_fireball", "minecraft:creeper", "minecraft:drowned", "minecraft:elder_guardian", "minecraft:endermite", "minecraft:evocation_illager", "minecraft:evocation_fang", "minecraft:ghast", "minecraft:spider", "minecraft:cave_spider", "minecraft:guardian", "minecraft:hoglin", "minecraft:husk", "minecraft:magma_cube", "minecraft:phantom", "minecraft:pillager", "minecraft:ravager", "minecraft:shulker", "minecraft:silverfish", "minecraft:skeleton", "minecraft:skeleton_horse", "minecraft:slime", "minecraft:vex", "minecraft:vindicator", "minecraft:witch", "minecraft:wither_skeleton", "minecraft:zoglin", "minecraft:zombie", "minecraft:zombie_villager_v2", "minecraft:piglin_brute", "minecraft:ender_dragon", "minecraft:wither", "minecraft:wither_skull", "minecraft:wither_skull_dangerous"],
+    mob: [
+        "minecraft:blaze",
+        "minecraft:small_fireball",
+        "minecraft:creeper",
+        "minecraft:drowned",
+        "minecraft:elder_guardian",
+        "minecraft:endermite",
+        "minecraft:evocation_illager",
+        "minecraft:evocation_fang",
+        "minecraft:ghast",
+        "minecraft:spider",
+        "minecraft:cave_spider",
+        "minecraft:guardian",
+        "minecraft:hoglin",
+        "minecraft:husk",
+        "minecraft:magma_cube",
+        "minecraft:phantom",
+        "minecraft:pillager",
+        "minecraft:ravager",
+        "minecraft:shulker",
+        "minecraft:silverfish",
+        "minecraft:skeleton",
+        "minecraft:skeleton_horse",
+        "minecraft:slime",
+        "minecraft:vex",
+        "minecraft:vindicator",
+        "minecraft:witch",
+        "minecraft:wither_skeleton",
+        "minecraft:zoglin",
+        "minecraft:zombie",
+        "minecraft:zombie_villager_v2",
+        "minecraft:piglin_brute",
+        "minecraft:ender_dragon",
+        "minecraft:wither",
+        "minecraft:wither_skull",
+        "minecraft:wither_skull_dangerous",
+    ],
 
-    projectile: ["minecraft:fireball", "minecraft:shulker_bullet", "minecraft:dragon_fireball", "minecraft:snowball", "minecraft:fireworks_rocket", "minecraft:thrown_trident", "minecraft:arrow", "minecraft:ender_pearl", "minecraft:egg"],
+    projectile: [
+        "minecraft:fireball",
+        "minecraft:shulker_bullet",
+        "minecraft:dragon_fireball",
+        "minecraft:snowball",
+        "minecraft:fireworks_rocket",
+        "minecraft:thrown_trident",
+        "minecraft:arrow",
+        "minecraft:ender_pearl",
+        "minecraft:egg",
+    ],
 };
 //玩家攻击实体
 mc.listen("onAttackEntity", (player, entity) => {
-    if(configAPI.data.operator.includes(player.xuid)){
+    if (configAPI.data.operator.includes(player.xuid)) {
         //管理员
         return;
     }
@@ -3914,17 +5444,35 @@ mc.listen("onAttackEntity", (player, entity) => {
             return;
         }
         let landData = pLandDataInterface.data[landId];
-        if (entityDB.blockType.includes(entity.type) && !landData.permissions.blocks.blockDestory) {
+        if (
+            entityDB.blockType.includes(entity.type) &&
+            !landData.permissions.blocks.blockDestory
+        ) {
             return false;
-        } else if (entity.type === "minecraft:armor_stand" && !landData.permissions.tools.useArmorStand) {
+        } else if (
+            entity.type === "minecraft:armor_stand" &&
+            !landData.permissions.tools.useArmorStand
+        ) {
             return false;
-        } else if (entity.type === "minecraft:player" && !landData.permissions.player.allowAttackPlayer) {
+        } else if (
+            entity.type === "minecraft:player" &&
+            !landData.permissions.player.allowAttackPlayer
+        ) {
             return false;
-        } else if (entityDB.peaceful.includes(entity.type) && !landData.permissions.player.allowAttackAnimal) {
+        } else if (
+            entityDB.peaceful.includes(entity.type) &&
+            !landData.permissions.player.allowAttackAnimal
+        ) {
             return false;
-        } else if (entityDB.neutral.includes(entity.type) && !landData.permissions.player.allowAttackNeutral) {
+        } else if (
+            entityDB.neutral.includes(entity.type) &&
+            !landData.permissions.player.allowAttackNeutral
+        ) {
             return false;
-        } else if (entityDB.mob.includes(entity.type) && !landData.permissions.player.allowAttackMobs) {
+        } else if (
+            entityDB.mob.includes(entity.type) &&
+            !landData.permissions.player.allowAttackMobs
+        ) {
             return false;
         }
         return;
@@ -3938,17 +5486,35 @@ mc.listen("onAttackEntity", (player, entity) => {
             return;
         }
         let landData = OlandDataInterface.data[landId];
-        if (entityDB.blockType.includes(entity.type) && !landData.permissions.blocks.blockDestory) {
+        if (
+            entityDB.blockType.includes(entity.type) &&
+            !landData.permissions.blocks.blockDestory
+        ) {
             return false;
-        } else if (entity.type === "minecraft:armor_stand" && !landData.permissions.tools.useArmorStand) {
+        } else if (
+            entity.type === "minecraft:armor_stand" &&
+            !landData.permissions.tools.useArmorStand
+        ) {
             return false;
-        } else if (entity.type === "minecraft:player" && !landData.permissions.player.allowAttackPlayer) {
+        } else if (
+            entity.type === "minecraft:player" &&
+            !landData.permissions.player.allowAttackPlayer
+        ) {
             return false;
-        } else if (entityDB.peaceful.includes(entity.type) && !landData.permissions.player.allowAttackAnimal) {
+        } else if (
+            entityDB.peaceful.includes(entity.type) &&
+            !landData.permissions.player.allowAttackAnimal
+        ) {
             return false;
-        } else if (entityDB.neutral.includes(entity.type) && !landData.permissions.player.allowAttackNeutral) {
+        } else if (
+            entityDB.neutral.includes(entity.type) &&
+            !landData.permissions.player.allowAttackNeutral
+        ) {
             return false;
-        } else if (entityDB.mob.includes(entity.type) && !landData.permissions.player.allowAttackMobs) {
+        } else if (
+            entityDB.mob.includes(entity.type) &&
+            !landData.permissions.player.allowAttackMobs
+        ) {
             return false;
         }
         return;
@@ -3966,26 +5532,57 @@ mc.listen("onRide", (driver, target) => {
         return;
     }
     if (landId) {
-
         if (isPlayer && pLandDataInterface.inTrust(player.xuid, landId)) {
             return;
         }
         let landData = pLandDataInterface.data[landId];
-        if (isPlayer && target.type === "minecraft:boat" && landData.permissions.player.allowUseBoat) {
+        if (
+            isPlayer &&
+            target.type === "minecraft:boat" &&
+            landData.permissions.player.allowUseBoat
+        ) {
             return;
-        } else if (isPlayer && target.type === "minecraft:boat" && !landData.permissions.player.allowUseBoat) {
+        } else if (
+            isPlayer &&
+            target.type === "minecraft:boat" &&
+            !landData.permissions.player.allowUseBoat
+        ) {
             return false;
-        } else if (isPlayer && target.type === "minecraft:minecart" && landData.permissions.player.allowUseMinecart) {
+        } else if (
+            isPlayer &&
+            target.type === "minecraft:minecart" &&
+            landData.permissions.player.allowUseMinecart
+        ) {
             return;
-        } else if (isPlayer && target.type === "minecraft:minecart" && !landData.permissions.player.allowUseMinecart) {
+        } else if (
+            isPlayer &&
+            target.type === "minecraft:minecart" &&
+            !landData.permissions.player.allowUseMinecart
+        ) {
             return false;
-        } else if (!isPlayer && target.type === "minecraft:boat" && landData.permissions.entity.allowUseBoat) {
+        } else if (
+            !isPlayer &&
+            target.type === "minecraft:boat" &&
+            landData.permissions.entity.allowUseBoat
+        ) {
             return;
-        } else if (!isPlayer && target.type === "minecraft:boat" && !landData.permissions.entity.allowUseBoat) {
+        } else if (
+            !isPlayer &&
+            target.type === "minecraft:boat" &&
+            !landData.permissions.entity.allowUseBoat
+        ) {
             return false;
-        } else if (!isPlayer && target.type === "minecraft:minecart" && landData.permissions.entity.allowUseMinecart) {
+        } else if (
+            !isPlayer &&
+            target.type === "minecraft:minecart" &&
+            landData.permissions.entity.allowUseMinecart
+        ) {
             return;
-        } else if (!isPlayer && target.type === "minecraft:minecart" && !landData.permissions.entity.allowUseMinecart) {
+        } else if (
+            !isPlayer &&
+            target.type === "minecraft:minecart" &&
+            !landData.permissions.entity.allowUseMinecart
+        ) {
             return false;
         }
         if (!landData.permissions.entity.allowRideEntity) {
@@ -4003,21 +5600,53 @@ mc.listen("onRide", (driver, target) => {
             return;
         }
         let landData = OlandDataInterface.data[landId];
-        if (isPlayer && target.type === "minecraft:boat" && landData.permissions.player.allowUseBoat) {
+        if (
+            isPlayer &&
+            target.type === "minecraft:boat" &&
+            landData.permissions.player.allowUseBoat
+        ) {
             return;
-        } else if (isPlayer && target.type === "minecraft:boat" && !landData.permissions.player.allowUseBoat) {
+        } else if (
+            isPlayer &&
+            target.type === "minecraft:boat" &&
+            !landData.permissions.player.allowUseBoat
+        ) {
             return false;
-        } else if (isPlayer && target.type === "minecraft:minecart" && landData.permissions.player.allowUseMinecart) {
+        } else if (
+            isPlayer &&
+            target.type === "minecraft:minecart" &&
+            landData.permissions.player.allowUseMinecart
+        ) {
             return;
-        } else if (isPlayer && target.type === "minecraft:minecart" && !landData.permissions.player.allowUseMinecart) {
+        } else if (
+            isPlayer &&
+            target.type === "minecraft:minecart" &&
+            !landData.permissions.player.allowUseMinecart
+        ) {
             return false;
-        } else if (!isPlayer && target.type === "minecraft:boat" && landData.permissions.entity.allowUseBoat) {
+        } else if (
+            !isPlayer &&
+            target.type === "minecraft:boat" &&
+            landData.permissions.entity.allowUseBoat
+        ) {
             return;
-        } else if (!isPlayer && target.type === "minecraft:boat" && !landData.permissions.entity.allowUseBoat) {
+        } else if (
+            !isPlayer &&
+            target.type === "minecraft:boat" &&
+            !landData.permissions.entity.allowUseBoat
+        ) {
             return false;
-        } else if (!isPlayer && target.type === "minecraft:minecart" && landData.permissions.entity.allowUseMinecart) {
+        } else if (
+            !isPlayer &&
+            target.type === "minecraft:minecart" &&
+            landData.permissions.entity.allowUseMinecart
+        ) {
             return;
-        } else if (!isPlayer && target.type === "minecraft:minecart" && !landData.permissions.entity.allowUseMinecart) {
+        } else if (
+            !isPlayer &&
+            target.type === "minecraft:minecart" &&
+            !landData.permissions.entity.allowUseMinecart
+        ) {
             return false;
         }
         if (!landData.permissions.entity.allowRideEntity) {
@@ -4034,15 +5663,19 @@ mc.listen("onMobHurt", (target, source, damage) => {
         //不是实体造成的伤害
         return;
     }
-    if (source.isPlayer()) {
-        //玩家造成的攻击，这里不拦截
+    if (target.isPlayer()) {
+        //玩家被攻击，这里不拦截
         return;
     }
     let pos = target.pos;
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = pLandDataInterface.data[landId];
-        if ((entityDB.mob.includes(source.type) || entityDB.neutral.includes(source.type)) && !landData.permissions.entity.allowAttackEntity) {
+        if (
+            (entityDB.mob.includes(source.type) ||
+                entityDB.neutral.includes(source.type)) &&
+            !landData.permissions.entity.allowAttackEntity
+        ) {
             return false;
         }
         return;
@@ -4053,7 +5686,11 @@ mc.listen("onMobHurt", (target, source, damage) => {
     landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = OlandDataInterface.data[landId];
-        if ((entityDB.mob.includes(source.type) || entityDB.neutral.includes(source.type)) && !landData.permissions.entity.allowAttackEntity) {
+        if (
+            (entityDB.mob.includes(source.type) ||
+                entityDB.neutral.includes(source.type)) &&
+            !landData.permissions.entity.allowAttackEntity
+        ) {
             return false;
         }
         return;
@@ -4062,22 +5699,37 @@ mc.listen("onMobHurt", (target, source, damage) => {
 
 //生物生成控制
 mc.listen("onMobSpawn", (type, pos) => {
-    if(type==="minecraft:player"){
+    if (type === "minecraft:player") {
         //是玩家，不拦截
         return;
     }
-    if(entityDB.blockType.includes(type)|| entityDB.projectile.includes(type)){
+    if (
+        entityDB.blockType.includes(type) ||
+        entityDB.projectile.includes(type)
+    ) {
         //实体不是生物，不拦截
         return;
     }
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = pLandDataInterface.data[landId];
-        if(entityDB.mob.includes(type) && !landData.permissions.entity.allowMobSpawn){
+        if (
+            entityDB.mob.includes(type) &&
+            !landData.permissions.entity.allowMobSpawn
+        ) {
             return false;
-        }else if(entityDB.neutral.includes(type) && !landData.permissions.entity.allowNeutralSpawn){
+        } else if (
+            entityDB.neutral.includes(type) &&
+            !landData.permissions.entity.allowNeutralSpawn
+        ) {
             return false;
-        }else if(entityDB.peaceful.includes(type) && !landData.permissions.entity.allowAnimalSpawn){
+        } else if (
+            entityDB.peaceful.includes(type) &&
+            !landData.permissions.entity.allowAnimalSpawn
+        ) {
+            return false;
+        }
+        if (!configAPI.data.common.defaultSpawn) {
             return false;
         }
         return;
@@ -4088,23 +5740,32 @@ mc.listen("onMobSpawn", (type, pos) => {
     landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
     if (landId) {
         let landData = OlandDataInterface.data[landId];
-        if(entityDB.mob.includes(type) && !landData.permissions.entity.allowMobSpawn){
+        if (
+            entityDB.mob.includes(type) &&
+            !landData.permissions.entity.allowMobSpawn
+        ) {
             return false;
-        }else if(entityDB.neutral.includes(type) && !landData.permissions.entity.allowNeutralSpawn){
+        } else if (
+            entityDB.neutral.includes(type) &&
+            !landData.permissions.entity.allowNeutralSpawn
+        ) {
             return false;
-        }else if(entityDB.peaceful.includes(type) && !landData.permissions.entity.allowAnimalSpawn){
+        } else if (
+            entityDB.peaceful.includes(type) &&
+            !landData.permissions.entity.allowAnimalSpawn
+        ) {
+            return false;
+        }
+        if (!configAPI.data.common.defaultSpawn) {
             return false;
         }
         return;
-    }
-    if(!configAPI.data.common.defaultSpawn){
-        return false;
     }
 });
 
 //进食
 mc.listen("onEat", (player, item) => {
-    if(configAPI.data.operator.includes(player.xuid)){
+    if (configAPI.data.operator.includes(player.xuid)) {
         //管理员
         return;
     }
@@ -4139,7 +5800,7 @@ mc.listen("onEat", (player, item) => {
 //弹射物监听
 
 mc.listen("onSpawnProjectile", (shooter, type) => {
-    if(!shooter.type){
+    if (!shooter.type) {
         //发射器发射
         return;
     }
@@ -4155,7 +5816,7 @@ mc.listen("onSpawnProjectile", (shooter, type) => {
             }
         }
         let player = shooter.toPlayer();
-        if(configAPI.data.operator.includes(player.xuid)){
+        if (configAPI.data.operator.includes(player.xuid)) {
             //管理员
             return;
         }
@@ -4170,7 +5831,10 @@ mc.listen("onSpawnProjectile", (shooter, type) => {
                 return false;
             }
         }
-        if (type === "minecraft:splash_potion" || type === "minecraft:lingering_potion") {
+        if (
+            type === "minecraft:splash_potion" ||
+            type === "minecraft:lingering_potion"
+        ) {
             //玩家扔药水
             if (landData.permissions.player.allowThrowPotion) {
                 return;
@@ -4198,7 +5862,7 @@ mc.listen("onSpawnProjectile", (shooter, type) => {
             }
         }
         let player = shooter.toPlayer();
-        if(configAPI.data.operator.includes(player.xuid)){
+        if (configAPI.data.operator.includes(player.xuid)) {
             //管理员
             return;
         }
@@ -4213,7 +5877,10 @@ mc.listen("onSpawnProjectile", (shooter, type) => {
                 return false;
             }
         }
-        if (type === "minecraft:splash_potion" || type === "minecraft:lingering_potion") {
+        if (
+            type === "minecraft:splash_potion" ||
+            type === "minecraft:lingering_potion"
+        ) {
             //玩家扔药水
             if (landData.permissions.player.allowThrowPotion) {
                 return;
@@ -4231,7 +5898,7 @@ mc.listen("onSpawnProjectile", (shooter, type) => {
 
 //修改盔甲架
 mc.listen("onChangeArmorStand", (as, player, item) => {
-    if(configAPI.data.operator.includes(player.xuid)){
+    if (configAPI.data.operator.includes(player.xuid)) {
         //管理员
         return;
     }
@@ -4290,28 +5957,50 @@ function CommandTpSetHander(player) {
         //管理员，如果存在都允许
         permisstion = [!!pLandId, !!oLandId];
     }
-    if (pLandId && pLandDataInterface.data[pLandId].settings.owner === player.xuid) {
+    if (
+        pLandId &&
+        pLandDataInterface.data[pLandId].settings.owner === player.xuid
+    ) {
         permisstion[0] = true;
     }
-    if (oLandId && OlandDataInterface.data[oLandId].settings.owner === orgAPI.getOrgNum(player.xuid) && orgAPI.isOwner(player.xuid)) {
+    if (
+        oLandId &&
+        OlandDataInterface.data[oLandId].settings.owner ===
+            orgAPI.getOrgNum(player.xuid) &&
+        orgAPI.isOwner(player.xuid)
+    ) {
         permisstion[1] = true;
     }
     if (permisstion[0] && permisstion[1]) {
         //俩都允许，弹出窗口任选
-        player.sendModalForm(i18n.$t("teleport.set.title"), i18n.$t("teleport.set.desp"), i18n.$t("teleport.set.pri"), i18n.$t("teleport.set.org"), (pl, dt) => {
-            if (dt == null) {
-                return;
+        player.sendModalForm(
+            i18n.$t("teleport.set.title"),
+            i18n.$t("teleport.set.desp"),
+            i18n.$t("teleport.set.pri"),
+            i18n.$t("teleport.set.org"),
+            (pl, dt) => {
+                if (dt == null) {
+                    return;
+                }
+                if (dt) {
+                    pLandDataInterface.data[pLandId].teleport = [
+                        pos.x,
+                        pos.y,
+                        pos.z,
+                    ];
+                    pLandDataInterface.save();
+                    pl.tell(i18n.$t("teleport.set.success"));
+                } else {
+                    OlandDataInterface.data[oLandId].teleport = [
+                        pos.x,
+                        pos.y,
+                        pos.z,
+                    ];
+                    OlandDataInterface.save();
+                    pl.tell(i18n.$t("teleport.set.success"));
+                }
             }
-            if (dt) {
-                pLandDataInterface.data[pLandId].teleport = [pos.x, pos.y, pos.z];
-                pLandDataInterface.save();
-                player.tell(i18n.$t("teleport.set.success"));
-            } else {
-                OlandDataInterface.data[oLandId].teleport = [pos.x, pos.y, pos.z];
-                OlandDataInterface.save();
-                player.tell(i18n.$t("teleport.set.success"));
-            }
-        });
+        );
     } else if (permisstion[0]) {
         pLandDataInterface.data[pLandId].teleport = [pos.x, pos.y, pos.z];
         pLandDataInterface.save();
@@ -4338,28 +6027,42 @@ function CommandTpClearHander(player) {
         //管理员，如果存在都允许
         permisstion = [!!pLandId, !!oLandId];
     }
-    if (pLandId && pLandDataInterface.data[pLandId].settings.owner === player.xuid) {
+    if (
+        pLandId &&
+        pLandDataInterface.data[pLandId].settings.owner === player.xuid
+    ) {
         permisstion[0] = true;
     }
-    if (oLandId && OlandDataInterface.data[oLandId].settings.owner === orgAPI.getOrgNum(player.xuid) && orgAPI.isOwner(player.xuid)) {
+    if (
+        oLandId &&
+        OlandDataInterface.data[oLandId].settings.owner ===
+            orgAPI.getOrgNum(player.xuid) &&
+        orgAPI.isOwner(player.xuid)
+    ) {
         permisstion[1] = true;
     }
     if (permisstion[0] && permisstion[1]) {
         //俩都允许，弹出窗口任选
-        player.sendModalForm(i18n.$t("teleport.set.title"), i18n.$t("teleport.set.desp"), i18n.$t("teleport.set.pri"), i18n.$t("teleport.set.org"), (pl, dt) => {
-            if (dt == null) {
-                return;
+        player.sendModalForm(
+            i18n.$t("teleport.set.title"),
+            i18n.$t("teleport.set.desp"),
+            i18n.$t("teleport.set.pri"),
+            i18n.$t("teleport.set.org"),
+            (pl, dt) => {
+                if (dt == null) {
+                    return;
+                }
+                if (dt) {
+                    pLandDataInterface.data[pLandId].teleport = [];
+                    pLandDataInterface.save();
+                    player.tell(i18n.$t("teleport.clear.success"));
+                } else {
+                    OlandDataInterface.data[oLandId].teleport = [];
+                    OlandDataInterface.save();
+                    player.tell(i18n.$t("teleport.clear.success"));
+                }
             }
-            if (dt) {
-                pLandDataInterface.data[pLandId].teleport = [];
-                pLandDataInterface.save();
-                player.tell(i18n.$t("teleport.clear.success"));
-            } else {
-                OlandDataInterface.data[oLandId].teleport = [];
-                OlandDataInterface.save();
-                player.tell(i18n.$t("teleport.clear.success"));
-            }
-        });
+        );
     } else if (permisstion[0]) {
         pLandDataInterface.data[pLandId].teleport = [];
         pLandDataInterface.save();
@@ -4381,7 +6084,7 @@ function CommandTpGuiHander(player) {
     }
     let landList = [];
     let tLandList = belongToApi.data.player[player.xuid];
-    if (tLandList && tLandList.length!==0) {
+    if (tLandList && tLandList.length !== 0) {
         for (const landId of tLandList) {
             let landData = pLandDataInterface.data[landId];
             if (landData && landData.teleport.length !== 0) {
@@ -4389,13 +6092,13 @@ function CommandTpGuiHander(player) {
                     isOrg: false,
                     name: landData.settings.name,
                     teleport: landData.teleport,
-                    dim: landData.range.dimid
+                    dim: landData.range.dimid,
                 });
             }
         }
     }
     tLandList = belongToApi.data.shared[player.xuid];
-    if (tLandList && tLandList.length!==0) {
+    if (tLandList && tLandList.length !== 0) {
         for (const landId of tLandList) {
             let landData = pLandDataInterface.data[landId];
             if (landData && landData.teleport.length !== 0) {
@@ -4403,14 +6106,14 @@ function CommandTpGuiHander(player) {
                     isOrg: false,
                     name: landData.settings.name,
                     teleport: landData.teleport,
-                    dim: landData.range.dimid
+                    dim: landData.range.dimid,
                 });
             }
         }
     }
     if (enableOrg && orgAPI.getOrgNum(player.xuid)) {
         tLandList = belongToApi.data.org[orgAPI.getOrgNum(player.xuid)];
-        if (tLandList && tLandList.length!==0) {
+        if (tLandList && tLandList.length !== 0) {
             for (const landId of tLandList) {
                 let landData = OlandDataInterface.data[landId];
                 if (landData && landData.teleport.length !== 0) {
@@ -4418,20 +6121,20 @@ function CommandTpGuiHander(player) {
                         isOrg: true,
                         name: landData.settings.name,
                         teleport: landData.teleport,
-                        dim: landData.range.dimid
+                        dim: landData.range.dimid,
                     });
                 }
             }
         }
     }
-    //构建临时表完成，进行渲染。
+    //构建临时表完成，进行渲染
     let fm = mc.newSimpleForm();
     fm.setTitle(i18n.$t("teleport.gui.title"));
     for (const item of landList) {
         if (item.isOrg) {
-            fm.addButton(i18n.$t("teleport.gui.Orgitem", [item.name]))
+            fm.addButton(i18n.$t("teleport.gui.Orgitem", [item.name]));
         } else {
-            fm.addButton(i18n.$t("teleport.gui.Priitem", [item.name]))
+            fm.addButton(i18n.$t("teleport.gui.Priitem", [item.name]));
         }
     }
     player.sendForm(fm, (pl, dt) => {
@@ -4439,9 +6142,14 @@ function CommandTpGuiHander(player) {
             return;
         }
         let land = landList[dt];
-        pl.teleport(land.teleport[0], land.teleport[1], land.teleport[2], land.dim);
-        pl.tell(i18n.$t("teleport.gui.success"))
-    })
+        pl.teleport(
+            land.teleport[0],
+            land.teleport[1],
+            land.teleport[2],
+            land.dim
+        );
+        pl.tell(i18n.$t("teleport.gui.success"));
+    });
 }
 
 //事件监控
@@ -4493,12 +6201,11 @@ mc.listen("onRedStoneUpdate", (block, level, isActive) => {
     }
 });
 
-
 //活塞推动，两事件要一块处理
 mc.listen("onPistonTryPush", (piston, block) => {
     let pos = block.pos;
     //俩只要有一个false，则不能动
-    return (PistonPushBlock(pos) && PistonMove(piston));
+    return PistonPushBlock(pos) && PistonMove(piston);
 });
 //活塞推动物品
 function PistonPushBlock(pos) {
@@ -4521,7 +6228,7 @@ function PistonPushBlock(pos) {
         }
         return true;
     }
-};
+}
 //活塞运动
 function PistonMove(pos) {
     let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
@@ -4592,14 +6299,14 @@ function LiquidFlowEvents(pos) {
 }
 mc.listen("onLiquidFlow", (from, to) => {
     let pos = from.pos;
-    return (LiquidFlowEvents(pos) && LiquidFlowEvents(to));
+    return LiquidFlowEvents(pos) && LiquidFlowEvents(to);
 });
 
 //爆炸（需要判断范围，团队优先）
 /**
- * 
- * @param {landData} landData 
- * @param {pos} pos 
+ *
+ * @param {landData} landData
+ * @param {pos} pos
  * @returns {boolean}
  */
 //可以爆炸，返回true，不能爆炸返回false
@@ -4611,7 +6318,7 @@ function ExplodeHander(landData, pos, range) {
         return true;
     }
     //定义距离
-    distance = {
+    let distance = {
         nx: landData.range.min_position[0] - pos.x,
         px: pos.x - landData.range.max_position[0],
         nz: landData.range.min_position[2] - pos.z,
@@ -4619,60 +6326,105 @@ function ExplodeHander(landData, pos, range) {
         ny: landData.range.min_position[1] - pos.y,
         py: pos.y - landData.range.max_position[1],
     };
-    if (landData.range.type2D && (distance.nx > range || distance.px > range || distance.nz > range || distance.pz > range)) {
+    if (
+        landData.range.type2D &&
+        (distance.nx > range ||
+            distance.px > range ||
+            distance.nz > range ||
+            distance.pz > range)
+    ) {
         //范围之外
         return true;
-    } else if (!landData.range.type2D && (distance.nx > range || distance.px > range || distance.nz > range || distance.pz > range || distance.ny > range || distance.py > range)) {
+    } else if (
+        !landData.range.type2D &&
+        (distance.nx > range ||
+            distance.px > range ||
+            distance.nz > range ||
+            distance.pz > range ||
+            distance.ny > range ||
+            distance.py > range)
+    ) {
         //范围之外
         return true;
     }
     return false;
 }
 //方块爆炸
-mc.listen("onBlockExplode", (source, pos, radius, maxResistance, isDestroy, isFire) => {
-    if (enableOrg) {
-        let OchunksLand = ChunkInterface.getChunksLand(pos.x, pos.z, pos.dimid, true);
-        for (const landId of OchunksLand) {
-            let landData = OlandDataInterface.data[landId];
+mc.listen(
+    "onBlockExplode",
+    (source, pos, radius, maxResistance, isDestroy, isFire) => {
+        if (enableOrg) {
+            let OchunksLand = ChunkInterface.getChunksLand(
+                pos.x,
+                pos.z,
+                pos.dimid,
+                true
+            );
+            for (const landId of OchunksLand) {
+                let landData = OlandDataInterface.data[landId];
+                if (!ExplodeHander(landData, pos, radius)) {
+                    return false;
+                }
+            }
+        }
+        let PchunksLand = ChunkInterface.getChunksLand(
+            pos.x,
+            pos.z,
+            pos.dimid,
+            false
+        );
+        for (const landId of PchunksLand) {
+            let landData = pLandDataInterface.data[landId];
             if (!ExplodeHander(landData, pos, radius)) {
                 return false;
             }
         }
     }
-    let PchunksLand = ChunkInterface.getChunksLand(pos.x, pos.z, pos.dimid, false);
-    for (const landId of PchunksLand) {
-        let landData = pLandDataInterface.data[landId];
-        if (!ExplodeHander(landData, pos, radius)) {
-            return false;
-        }
-    }
-})
+);
 
 //实体爆炸
-mc.listen("onEntityExplode", (source, pos, radius, maxResistance, isDestroy, isFire) => {
-    if (enableOrg) {
-        let OchunksLand = ChunkInterface.getChunksLand(pos.x, pos.z, pos.dimid, true);
-        for (const landId of OchunksLand) {
-            let landData = OlandDataInterface.data[landId];
+mc.listen(
+    "onEntityExplode",
+    (source, pos, radius, maxResistance, isDestroy, isFire) => {
+        if (enableOrg) {
+            let OchunksLand = ChunkInterface.getChunksLand(
+                pos.x,
+                pos.z,
+                pos.dimid,
+                true
+            );
+            for (const landId of OchunksLand) {
+                let landData = OlandDataInterface.data[landId];
+                if (!ExplodeHander(landData, pos, radius)) {
+                    return false;
+                }
+            }
+        }
+        let PchunksLand = ChunkInterface.getChunksLand(
+            pos.x,
+            pos.z,
+            pos.dimid,
+            false
+        );
+        for (const landId of PchunksLand) {
+            let landData = pLandDataInterface.data[landId];
             if (!ExplodeHander(landData, pos, radius)) {
                 return false;
             }
         }
     }
-    let PchunksLand = ChunkInterface.getChunksLand(pos.x, pos.z, pos.dimid, false);
-    for (const landId of PchunksLand) {
-        let landData = pLandDataInterface.data[landId];
-        if (!ExplodeHander(landData, pos, radius)) {
-            return false;
-        }
-    }
-})
+);
 
 //凋零爆炸
 mc.listen("onWitherBossDestroy", (witherBoss, AAbb, aaBB) => {
     let pos = witherBoss.pos;
     if (enableOrg) {
-        let OchunksLand = ChunkInterface.getChunksLand(pos.x, pos.z, pos.dimid, true);
+        let OchunksLand = ChunkInterface.getChunksLand(
+            pos.x,
+            pos.z,
+            pos.dimid,
+            true
+        );
         for (const landId of OchunksLand) {
             let landData = OlandDataInterface.data[landId];
             if (!ExplodeHander(landData, pos, 16)) {
@@ -4680,25 +6432,33 @@ mc.listen("onWitherBossDestroy", (witherBoss, AAbb, aaBB) => {
             }
         }
     }
-    let PchunksLand = ChunkInterface.getChunksLand(pos.x, pos.z, pos.dimid, false);
+    let PchunksLand = ChunkInterface.getChunksLand(
+        pos.x,
+        pos.z,
+        pos.dimid,
+        false
+    );
     for (const landId of PchunksLand) {
         let landData = pLandDataInterface.data[landId];
         if (!ExplodeHander(landData, pos, 16)) {
             return false;
         }
     }
-})
+});
 
 /**
  * 回收领地
- * @param {player} player 
- * @param {string} landId 
- * @param {boolean} isOrg 
+ * @param {player} player
+ * @param {string} landId
+ * @param {boolean} isOrg
  */
 function recycleLand(player, landId, isOrg) {
     if (!configAPI.data.refund.rate === 0) {
         //不让回收
-        let fm = mc.newSimpleForm().setTitle(i18n.$t("recycle.gui.title")).setContent(i18n.$t("recycle.noPrem"));
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("recycle.gui.title"))
+            .setContent(i18n.$t("recycle.noPrem"));
         player.sendForm(fm, (pl, dt) => {
             ManageLand(pl, landId, isOrg);
         });
@@ -4712,68 +6472,113 @@ function recycleLand(player, landId, isOrg) {
         landData = OlandDataInterface.data[landId];
     } else {
         landData = pLandDataInterface.data[landId];
-    };
-    let posInterface = twoPosFormat(landData.range.max_position, landData.range.min_position);
+    }
+    let posInterface = twoPosFormat(
+        landData.range.max_position,
+        landData.range.min_position
+    );
     let price = 0;
     if (landData.range.type2D) {
         // 2D地皮价格
-        price = posInterface.dx * posInterface.dz * configAPI.data.sell.type2D.priceSquare;
+        price =
+            posInterface.dx *
+            posInterface.dz *
+            configAPI.data.sell.type2D.priceSquare;
     } else if (configAPI.data.sell.type3D.priceY) {
-        price = posInterface.dx * posInterface.dz * configAPI.data.sell.type3D.priceXZ + posInterface.dy * configAPI.data.sell.type3D.priceY;
+        price =
+            posInterface.dx *
+                posInterface.dz *
+                configAPI.data.sell.type3D.priceXZ +
+            posInterface.dy * configAPI.data.sell.type3D.priceY;
     } else {
-        price = posInterface.dx * posInterface.dy * posInterface.dz * configAPI.data.sell.type3D.priceXZ;
+        price =
+            posInterface.dx *
+            posInterface.dy *
+            posInterface.dz *
+            configAPI.data.sell.type3D.priceXZ;
     }
     price = parseInt(price * configAPI.data.refund.rate);
-    player.sendModalForm(i18n.$t("recycle.gui.title"), i18n.$t("recycle.gui.desp", [landId, (isOrg ? i18n.$t("this.manage.choose.org") : i18n.$t("this.manage.choose.pri")), landData.settings.name, price]), i18n.$t("common.YES"), i18n.$t("common.NO"), (pl, dt) => {
-        if (!dt) {
-            ManageLand(pl, landId, isOrg);
-        }
-        if (dt) {
-            //删除领地
-            playerState[pl.xuid].inOLand = "";
-            playerState[pl.xuid].inPLand = "";
-            if (isOrg) {
-                //删除关联信息
-                belongToApi.orgRemoveLand(landData.settings.owner, landId);
-                //删除区块绑定信息
-                ChunkInterface.unlinkOrg(landData.range.min_position[0], landData.range.max_position[0], landData.range.min_position[2], landData.range.max_position[2], landData.range.dimid, landId);
-                //删除领地
-                delete OlandDataInterface.data[landId];
-                //删除缓存
-                cache.clean();
-                //保存信息
-                belongToApi.save();
-                ChunkInterface.save();
-                OlandDataInterface.save();
-                //退钱
-                orgAPI.orgAddMoney(landData.settings.owner, price);
-            } else {
-                //删除玩家绑定信息
-                belongToApi.playerRemoveLand(landData.settings.owner, landId);
-                //删除信任玩家关联
-                for (const xuid of landData.share) {
-                    belongToApi.playerRemoveShare(xuid, landId)
-                }
-                //删除区块绑定信息
-                ChunkInterface.unlinkPrivate(landData.range.min_position[0], landData.range.max_position[0], landData.range.min_position[2], landData.range.max_position[2], landData.range.dimid, landId);
-                //删除领地
-                delete pLandDataInterface.data[landId];
-                //清除缓存
-                cache.clean();
-                //保存信息
-                belongToApi.save();
-                ChunkInterface.save();
-                pLandDataInterface.save();
-                //退钱
-                moneyUni.addMoney(landData.settings.owner, price);
+    player.sendModalForm(
+        i18n.$t("recycle.gui.title"),
+        i18n.$t("recycle.gui.desp", [
+            landId,
+            isOrg
+                ? i18n.$t("this.manage.choose.org")
+                : i18n.$t("this.manage.choose.pri"),
+            landData.settings.name,
+            price,
+        ]),
+        i18n.$t("common.YES"),
+        i18n.$t("common.NO"),
+        (pl, dt) => {
+            if (!dt) {
+                ManageLand(pl, landId, isOrg);
             }
-            //成功提示
-            //成功提示
-            let fm = mc.newSimpleForm().setTitle(i18n.$t("recycle.gui.title")).setContent(i18n.$t("recycle.gui.success"));
-            player.sendForm(fm, (pl, dt) => {
-            });
+            if (dt) {
+                //删除领地
+                playerState[pl.xuid].inOLand = "";
+                playerState[pl.xuid].inPLand = "";
+                if (isOrg) {
+                    //删除关联信息
+                    belongToApi.orgRemoveLand(landData.settings.owner, landId);
+                    //删除区块绑定信息
+                    ChunkInterface.unlinkOrg(
+                        landData.range.min_position[0],
+                        landData.range.max_position[0],
+                        landData.range.min_position[2],
+                        landData.range.max_position[2],
+                        landData.range.dimid,
+                        landId
+                    );
+                    //删除领地
+                    delete OlandDataInterface.data[landId];
+                    //删除缓存
+                    cache.clean();
+                    //保存信息
+                    belongToApi.save();
+                    ChunkInterface.save();
+                    OlandDataInterface.save();
+                    //退钱
+                    orgAPI.orgAddMoney(landData.settings.owner, price);
+                } else {
+                    //删除玩家绑定信息
+                    belongToApi.playerRemoveLand(
+                        landData.settings.owner,
+                        landId
+                    );
+                    //删除信任玩家关联
+                    for (const xuid of landData.share) {
+                        belongToApi.playerRemoveShare(xuid, landId);
+                    }
+                    //删除区块绑定信息
+                    ChunkInterface.unlinkPrivate(
+                        landData.range.min_position[0],
+                        landData.range.max_position[0],
+                        landData.range.min_position[2],
+                        landData.range.max_position[2],
+                        landData.range.dimid,
+                        landId
+                    );
+                    //删除领地
+                    delete pLandDataInterface.data[landId];
+                    //清除缓存
+                    cache.clean();
+                    //保存信息
+                    belongToApi.save();
+                    ChunkInterface.save();
+                    pLandDataInterface.save();
+                    //退钱
+                    moneyUni.addMoney(landData.settings.owner, price);
+                }
+                //成功提示
+                let fm = mc
+                    .newSimpleForm()
+                    .setTitle(i18n.$t("recycle.gui.title"))
+                    .setContent(i18n.$t("recycle.gui.success"));
+                player.sendForm(fm, (pl, dt) => {});
+            }
         }
-    });
+    );
 }
 function reEnclosingHander(player, landId, isOrg) {
     let landData;
@@ -4781,13 +6586,19 @@ function reEnclosingHander(player, landId, isOrg) {
         landData = OlandDataInterface.data[landId];
     } else {
         landData = pLandDataInterface.data[landId];
-    };
+    }
     playerState[player.xuid].state = "reEnclosing";
     playerState[player.xuid].editingLand.landId = landId;
     playerState[player.xuid].editingLand.isOrg = isOrg;
-    playerState[player.xuid].enclosure.posA = data.parseJson(data.toJson(landData.range.max_position));
-    playerState[player.xuid].enclosure.posB = data.parseJson(data.toJson(landData.range.min_position));
-    playerState[player.xuid].enclosure.dim = data.parseJson(data.toJson(landData.range.dimid));
+    playerState[player.xuid].enclosure.posA = data.parseJson(
+        data.toJson(landData.range.max_position)
+    );
+    playerState[player.xuid].enclosure.posB = data.parseJson(
+        data.toJson(landData.range.min_position)
+    );
+    playerState[player.xuid].enclosure.dim = data.parseJson(
+        data.toJson(landData.range.dimid)
+    );
 }
 function ReEnclosingScan(player) {
     let landId = playerState[player.xuid].editingLand.landId;
@@ -4796,8 +6607,11 @@ function ReEnclosingScan(player) {
         landData = OlandDataInterface.data[landId];
     } else {
         landData = pLandDataInterface.data[landId];
-    };
-    let posInter = twoPosFormat(playerState[player.xuid].enclosure.posA, playerState[player.xuid].enclosure.posB);
+    }
+    let posInter = twoPosFormat(
+        playerState[player.xuid].enclosure.posA,
+        playerState[player.xuid].enclosure.posB
+    );
     // 检查坐标
     if (posInter.maxY > 319) {
         posInter.maxY = 319;
@@ -4811,80 +6625,153 @@ function ReEnclosingScan(player) {
     }
     posInter.dy = posInter.maxY - posInter.minY;
     // 维度限制
-    if (!configAPI.data.limit.allowDimension.includes(playerState[player.xuid].enclosure.dim) && !configAPI.data.operator.includes(player.xuid)) {
+    if (
+        !configAPI.data.limit.allowDimension.includes(
+            playerState[player.xuid].enclosure.dim
+        ) &&
+        !configAPI.data.operator.includes(player.xuid)
+    ) {
         // 玩家不是管理员且圈地位置不在允许范围内
         player.tell(i18n.$t("enclose.confirm.dimensionNotAllow"));
+    }
+    if (
+        belongToApi.getLand(player.xuid).length >= configAPI.data.limit.maxLands
+    ) {
+        let fm = mc
+            .newSimpleForm()
+            .setTitle(i18n.$t("enclose.confirm.countover.title"))
+            .setContent(
+                i18n.$t("enclose.confirm.countover.info", [
+                    configAPI.data.limit.maxLands,
+                ])
+            );
+        player.sendForm(fm, () => {});
     }
     // 大小限制
     if (playerState[player.xuid].enclosure.type2D) {
         let square = posInter.dx * posInter.dz;
-        if (square > configAPI.data.limit.type2DSquare[1] || square < configAPI.data.limit.type2DSquare[0]) {
+        if (
+            square > configAPI.data.limit.type2DSquare[1] ||
+            square < configAPI.data.limit.type2DSquare[0]
+        ) {
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.confirm.over"))
-                .setContent(i18n.$t("enclose.confirm.2D.over", [square, configAPI.data.limit.type2DSquare[1], configAPI.data.limit.type2DSquare[0]]));
-            player.sendForm(fm, () => { });
+                .setContent(
+                    i18n.$t("enclose.confirm.2D.over", [
+                        square,
+                        configAPI.data.limit.type2DSquare[1],
+                        configAPI.data.limit.type2DSquare[0],
+                    ])
+                );
+            player.sendForm(fm, () => {});
             return;
         }
     } else {
         let volume = posInter.dx * posInter.dz * posInter.dz;
-        if (volume > configAPI.data.limit.type3DVolume[1] || volume < configAPI.data.limit.type3DVolume[0]) {
+        if (
+            volume > configAPI.data.limit.type3DVolume[1] ||
+            volume < configAPI.data.limit.type3DVolume[0]
+        ) {
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.confirm.over"))
-                .setContent(i18n.$t("enclose.confirm.3D.over", [volume, configAPI.data.limit.type3DVolume[1], configAPI.data.limit.type3DVolume[0]]));
-            player.sendForm(fm, () => { });
+                .setContent(
+                    i18n.$t("enclose.confirm.3D.over", [
+                        volume,
+                        configAPI.data.limit.type3DVolume[1],
+                        configAPI.data.limit.type3DVolume[0],
+                    ])
+                );
+            player.sendForm(fm, () => {});
             return;
         }
     }
     //私人领地白名单
-    let pWhiteList = playerState[player.xuid].editingLand.isOrg ? getPLandinRange(twoPosFormat(landData.range.min_position, landData.range.max_position), playerState[player.xuid].enclosure.dim, playerState[player.xuid].enclosure.type2D) : [landId];
+    let pWhiteList = playerState[player.xuid].editingLand.isOrg
+        ? getPLandinRange(
+              twoPosFormat(
+                  landData.range.min_position,
+                  landData.range.max_position
+              ),
+              playerState[player.xuid].enclosure.dim,
+              playerState[player.xuid].enclosure.type2D
+          )
+        : [landId];
     let conflictLandId;
     // 团队领地冲突检查：
     if (enableOrg) {
-        conflictLandId = getOLandConflict(posInter, playerState[player.xuid].enclosure.dim, playerState[player.xuid].enclosure.type2D, [playerState[player.xuid].editingLand.isOrg ? landId : "没有"], player, playerState[player.xuid].editingLand.isOrg);
+        conflictLandId = getOLandConflict(
+            posInter,
+            playerState[player.xuid].enclosure.dim,
+            playerState[player.xuid].enclosure.type2D,
+            [playerState[player.xuid].editingLand.isOrg ? landId : "没有"],
+            player,
+            playerState[player.xuid].editingLand.isOrg
+        );
         if (conflictLandId) {
             // 发现冲突
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.conflict.title"))
                 .setContent(i18n.$t("enclose.conflict.org", [conflictLandId]));
-            player.sendForm(fm, () => { });
+            player.sendForm(fm, () => {});
             return;
         }
     }
     // 私人领地冲突检查
-    conflictLandId = getPLandConflict(posInter, playerState[player.xuid].enclosure.dim, playerState[player.xuid].enclosure.type2D, pWhiteList);
+    conflictLandId = getPLandConflict(
+        posInter,
+        playerState[player.xuid].enclosure.dim,
+        playerState[player.xuid].enclosure.type2D,
+        pWhiteList
+    );
     if (conflictLandId) {
         // 发现冲突
         let fm = mc
             .newSimpleForm()
             .setTitle(i18n.$t("enclose.conflict.title"))
             .setContent(i18n.$t("enclose.conflict.pri", [conflictLandId]));
-        player.sendForm(fm, () => { });
+        player.sendForm(fm, () => {});
         return;
     }
     //计算价格
     let newPrice = 0;
     if (playerState[player.xuid].enclosure.type2D) {
         // 2D地皮价格
-        newPrice = posInter.dx * posInter.dz * configAPI.data.sell.type2D.priceSquare;
+        newPrice =
+            posInter.dx * posInter.dz * configAPI.data.sell.type2D.priceSquare;
     } else if (configAPI.data.sell.type3D.priceY) {
-        newPrice = posInter.dx * posInter.dz * configAPI.data.sell.type3D.priceXZ + posInter.dy * configAPI.data.sell.type3D.priceY;
+        newPrice =
+            posInter.dx * posInter.dz * configAPI.data.sell.type3D.priceXZ +
+            posInter.dy * configAPI.data.sell.type3D.priceY;
     } else {
-        newPrice = posInter.dx * posInter.dy * posInter.dz * configAPI.data.sell.type3D.priceXZ;
+        newPrice =
+            posInter.dx *
+            posInter.dy *
+            posInter.dz *
+            configAPI.data.sell.type3D.priceXZ;
     }
 
-
-    let oldIntr = twoPosFormat(landData.range.min_position, landData.range.max_position);
+    let oldIntr = twoPosFormat(
+        landData.range.min_position,
+        landData.range.max_position
+    );
     let oldPrice = 0;
     if (landData.range.type2D) {
         // 2D地皮价格
-        oldPrice = oldIntr.dx * oldIntr.dz * configAPI.data.sell.type2D.priceSquare;
+        oldPrice =
+            oldIntr.dx * oldIntr.dz * configAPI.data.sell.type2D.priceSquare;
     } else if (configAPI.data.sell.type3D.priceY) {
-        oldPrice = oldIntr.dx * oldIntr.dz * configAPI.data.sell.type3D.priceXZ + oldIntr.dy * configAPI.data.sell.type3D.priceY;
+        oldPrice =
+            oldIntr.dx * oldIntr.dz * configAPI.data.sell.type3D.priceXZ +
+            oldIntr.dy * configAPI.data.sell.type3D.priceY;
     } else {
-        oldPrice = oldIntr.dx * oldIntr.dy * oldIntr.dz * configAPI.data.sell.type3D.priceXZ;
+        oldPrice =
+            oldIntr.dx *
+            oldIntr.dy *
+            oldIntr.dz *
+            configAPI.data.sell.type3D.priceXZ;
     }
     let price = newPrice - oldPrice;
     if (price < 0) {
@@ -4898,113 +6785,204 @@ function ReEnclosingScan(player) {
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.payment.title"))
-                .setContent(i18n.$t("enclose.payment.moneyNoEnough", [configAPI.data.economy.moneyName, String(price), moneyUni.get(player)]));
-            player.sendForm(fm, () => { });
+                .setContent(
+                    i18n.$t("enclose.payment.moneyNoEnough", [
+                        configAPI.data.economy.moneyName,
+                        String(price),
+                        moneyUni.get(player),
+                    ])
+                );
+            player.sendForm(fm, () => {});
         } else {
             // 钱够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.pri", [String(price), moneyUni.get(player)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
-                if (dt == null) {
-                    return;
-                }
-                if (dt) {
-                    if (!moneyUni.pay(player, price)) {
-                        player.tell(i18n.$t("enclose.payment.error"));
+            player.sendModalForm(
+                i18n.$t("enclose.payment.title"),
+                i18n.$t("enclose.payment.pri", [
+                    String(price),
+                    moneyUni.get(player),
+                ]),
+                i18n.$t("common.confirm"),
+                i18n.$t("common.cancel"),
+                (pl, dt) => {
+                    if (dt == null) {
                         return;
                     }
-                    ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
-                    //encloseMain(pl, posInterface);
+                    if (dt) {
+                        if (!moneyUni.pay(player, price)) {
+                            player.tell(i18n.$t("enclose.payment.error"));
+                            return;
+                        }
+                        ReEncloseMain(
+                            pl,
+                            landId,
+                            playerState[pl.xuid].editingLand.isOrg,
+                            posInter
+                        );
+                        //encloseMain(pl, posInterface);
+                    }
                 }
-            });
+            );
         }
     } else {
         // 是公会，要求其选择自己的钱包还是公会钱包
-        if (moneyUni.get(player) < price && orgAPI.orgGetMoney(landData.settings.owner) < price) {
+        if (
+            moneyUni.get(player) < price &&
+            orgAPI.orgGetMoney(landData.settings.owner) < price
+        ) {
             // 完全没钱
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("enclose.payment.title"))
-                .setContent(i18n.$t("enclose.payment.moneyNoEnough", [configAPI.data.economy.moneyName, String(price), moneyUni.get(player)]));
+                .setContent(
+                    i18n.$t("enclose.payment.moneyNoEnough", [
+                        configAPI.data.economy.moneyName,
+                        String(price),
+                        moneyUni.get(player),
+                    ])
+                );
             player.sendForm(fm, (pla, dt) => {
                 ManageLand(pla, landId, isOrg);
             });
             return;
         } else if (moneyUni.get(player) < price) {
             // 工会基金钱够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.ori", [String(price), orgAPI.orgGetMoney(landData.settings.owner)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
-                if (dt == null) {
-                    return;
-                }
-                if (dt) {
-                    if (!orgAPI.orgAddMoney(landData.settings.owner, -price)) {
-                        pl.tell(i18n.$t("enclose.payment.error"));
+            player.sendModalForm(
+                i18n.$t("enclose.payment.title"),
+                i18n.$t("enclose.payment.ori", [
+                    String(price),
+                    orgAPI.orgGetMoney(landData.settings.owner),
+                ]),
+                i18n.$t("common.confirm"),
+                i18n.$t("common.cancel"),
+                (pl, dt) => {
+                    if (dt == null) {
                         return;
                     }
-                    //encloseMain(pl, posInterface, orgNum);
-                    ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
+                    if (dt) {
+                        if (
+                            !orgAPI.orgAddMoney(landData.settings.owner, -price)
+                        ) {
+                            pl.tell(i18n.$t("enclose.payment.error"));
+                            return;
+                        }
+                        //encloseMain(pl, posInterface, orgNum);
+                        ReEncloseMain(
+                            pl,
+                            landId,
+                            playerState[pl.xuid].editingLand.isOrg,
+                            posInter
+                        );
+                    }
                 }
-            });
+            );
             return;
         } else if (orgAPI.orgGetMoney(landData.settings.owner) < price) {
             // 玩家钱包钱够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.pri", [String(price), moneyUni.get(player)]), i18n.$t("common.confirm"), i18n.$t("common.cancel"), (pl, dt) => {
-                if (dt == null) {
-                    return;
-                }
-                if (dt) {
-                    if (price >= 0) {
-                        if (!moneyUni.pay(pl, price)) {
-                            pl.tell(i18n.$t("enclose.payment.error"));
-                            return;
-                        }
-                        ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
-                    } else {
-                        if (!moneyUni.addMoney(pl.xuid, -price)) {
-                            pl.tell(i18n.$t("enclose.payment.error"));
-                            return;
-                        }
-                        ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
-                    }
-                    //encloseMain(pl, posInterface, orgNum);
-                }
-            });
-        } else {
-            // 钱都够
-            player.sendModalForm(i18n.$t("enclose.payment.title"), i18n.$t("enclose.payment.choose", [String(price), moneyUni.get(player), orgAPI.orgGetMoney(landData.settings.owner)]), i18n.$t("enclose.pay.self"), i18n.$t("enclose.pay.org"), (pl, dt) => {
-                if (dt == null) {
-                    return;
-                }
-                if (dt) {
-                    if (price >= 0) {
-                        if (!moneyUni.pay(pl, price)) {
-                            pl.tell(i18n.$t("enclose.payment.error"));
-                            return;
-                        }
-                        ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
-                    } else {
-                        if (!moneyUni.addMoney(pl.xuid, -price)) {
-                            pl.tell(i18n.$t("enclose.payment.error"));
-                            return;
-                        }
-                        ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
-                    }
-                } else {
-                    if (!orgAPI.orgAddMoney(landData.settings.owner, -price)) {
-                        pl.tell(i18n.$t("enclose.payment.error"));
+            player.sendModalForm(
+                i18n.$t("enclose.payment.title"),
+                i18n.$t("enclose.payment.pri", [
+                    String(price),
+                    moneyUni.get(player),
+                ]),
+                i18n.$t("common.confirm"),
+                i18n.$t("common.cancel"),
+                (pl, dt) => {
+                    if (dt == null) {
                         return;
                     }
-                    //encloseMain(pl, posInterface, orgNum);
-                    ReEncloseMain(pl, landId, playerState[pl.xuid].editingLand.isOrg, posInter);
+                    if (dt) {
+                        if (price >= 0) {
+                            if (!moneyUni.pay(pl, price)) {
+                                pl.tell(i18n.$t("enclose.payment.error"));
+                                return;
+                            }
+                            ReEncloseMain(
+                                pl,
+                                landId,
+                                playerState[pl.xuid].editingLand.isOrg,
+                                posInter
+                            );
+                        } else {
+                            if (!moneyUni.addMoney(pl.xuid, -price)) {
+                                pl.tell(i18n.$t("enclose.payment.error"));
+                                return;
+                            }
+                            ReEncloseMain(
+                                pl,
+                                landId,
+                                playerState[pl.xuid].editingLand.isOrg,
+                                posInter
+                            );
+                        }
+                        //encloseMain(pl, posInterface, orgNum);
+                    }
                 }
-            });
+            );
+        } else {
+            // 钱都够
+            player.sendModalForm(
+                i18n.$t("enclose.payment.title"),
+                i18n.$t("enclose.payment.choose", [
+                    String(price),
+                    moneyUni.get(player),
+                    orgAPI.orgGetMoney(landData.settings.owner),
+                ]),
+                i18n.$t("enclose.pay.self"),
+                i18n.$t("enclose.pay.org"),
+                (pl, dt) => {
+                    if (dt == null) {
+                        return;
+                    }
+                    if (dt) {
+                        if (price >= 0) {
+                            if (!moneyUni.pay(pl, price)) {
+                                pl.tell(i18n.$t("enclose.payment.error"));
+                                return;
+                            }
+                            ReEncloseMain(
+                                pl,
+                                landId,
+                                playerState[pl.xuid].editingLand.isOrg,
+                                posInter
+                            );
+                        } else {
+                            if (!moneyUni.addMoney(pl.xuid, -price)) {
+                                pl.tell(i18n.$t("enclose.payment.error"));
+                                return;
+                            }
+                            ReEncloseMain(
+                                pl,
+                                landId,
+                                playerState[pl.xuid].editingLand.isOrg,
+                                posInter
+                            );
+                        }
+                    } else {
+                        if (
+                            !orgAPI.orgAddMoney(landData.settings.owner, -price)
+                        ) {
+                            pl.tell(i18n.$t("enclose.payment.error"));
+                            return;
+                        }
+                        //encloseMain(pl, posInterface, orgNum);
+                        ReEncloseMain(
+                            pl,
+                            landId,
+                            playerState[pl.xuid].editingLand.isOrg,
+                            posInter
+                        );
+                    }
+                }
+            );
         }
     }
-};
+}
 /**
- * 
- * @param {player} pl 
- * @param {string} landId 
- * @param {boolean} isOrg 
- * @param {posInterface} posInterface 
+ *
+ * @param {player} pl
+ * @param {string} landId
+ * @param {boolean} isOrg
+ * @param {posInterface} posInterface
  */
 function ReEncloseMain(player, landId, isOrg, posInterface) {
     /**
@@ -5015,21 +6993,35 @@ function ReEncloseMain(player, landId, isOrg, posInterface) {
         landData = OlandDataInterface.data[landId];
     } else {
         landData = pLandDataInterface.data[landId];
-    };
+    }
     const range = {
         type2D: playerState[player.xuid].enclosure.type2D,
         dimid: landData.range.dimid,
         min_position: [posInterface.minX, posInterface.minY, posInterface.minZ],
         max_position: [posInterface.maxX, posInterface.maxY, posInterface.maxZ],
-    }
+    };
     //删除旧的索引
     if (isOrg) {
-        ChunkInterface.unlinkOrg(landData.range.min_position[0], landData.range.max_position[0], landData.range.min_position[2], landData.range.max_position[2], landData.range.dimid, landId);
+        ChunkInterface.unlinkOrg(
+            landData.range.min_position[0],
+            landData.range.max_position[0],
+            landData.range.min_position[2],
+            landData.range.max_position[2],
+            landData.range.dimid,
+            landId
+        );
         OlandDataInterface.data[landId].range = range;
         ChunkInterface.linkOrg(landId);
         OlandDataInterface.save();
     } else {
-        ChunkInterface.unlinkPrivate(landData.range.min_position[0], landData.range.max_position[0], landData.range.min_position[2], landData.range.max_position[2], landData.range.dimid, landId);
+        ChunkInterface.unlinkPrivate(
+            landData.range.min_position[0],
+            landData.range.max_position[0],
+            landData.range.min_position[2],
+            landData.range.max_position[2],
+            landData.range.dimid,
+            landId
+        );
         pLandDataInterface.data[landId].range = range;
         ChunkInterface.linkPrivate(landId);
         pLandDataInterface.save();
@@ -5045,7 +7037,6 @@ function ReEncloseMain(player, landId, isOrg, posInterface) {
     playerState[player.xuid].state = "playing";
 }
 
-
 //含有离线玩家的数据表
 const playerDB = {
     /**
@@ -5053,14 +7044,19 @@ const playerDB = {
      */
     data: {},
     save() {
-        file.writeTo("./plugins/js_data/landEX/playerDB.json", data.toJson(this.data));
+        File.writeTo(
+            "./plugins/js_data/landEX/playerDB.json",
+            data.toJson(this.data)
+        );
     },
     reload() {
-        this.data = data.parseJson(File.readFrom("./plugins/js_data/landEX/playerDB.json"));
+        this.data = data.parseJson(
+            File.readFrom("./plugins/js_data/landEX/playerDB.json")
+        );
     },
 };
 // 读取已有的配置文件
-if (file.exists("./plugins/js_data/landEX/playerDB.json")) {
+if (File.exists("./plugins/js_data/landEX/playerDB.json")) {
     configAPI.reload();
 } else {
     configAPI.save();
@@ -5074,15 +7070,25 @@ if (file.exists("./plugins/js_data/landEX/playerDB.json")) {
  * @callback playerSelectorCallback
  * @param {player} player
  * @param {string} xuid
- * 
+ *
  */
 function playerSelector(player, callback, playerList = {}, search = "") {
     for (const player of mc.getOnlinePlayers()) {
         playerList[player.xuid] = player.realName;
     }
-    let fm = mc.newCustomForm().setTitle(i18n.$t("manage.playerSelector.title")).addLabel(i18n.$t("manage.playerSelector.tips"));
-    fm.addInput(i18n.$t("manage.playerSelector.search"), i18n.$t("manage.playerSelector.searchInput"), search);
-    fm.addDropdown(i18n.$t("manage.playerSelector.choose"), Object.values(playerList));
+    let fm = mc
+        .newCustomForm()
+        .setTitle(i18n.$t("manage.playerSelector.title"))
+        .addLabel(i18n.$t("manage.playerSelector.tips"));
+    fm.addInput(
+        i18n.$t("manage.playerSelector.search"),
+        i18n.$t("manage.playerSelector.searchInput"),
+        search
+    );
+    fm.addDropdown(
+        i18n.$t("manage.playerSelector.choose"),
+        Object.values(playerList)
+    );
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             //玩家取消，直接回调
@@ -5100,24 +7106,24 @@ function playerSelector(player, callback, playerList = {}, search = "") {
             }
             if (Object.keys(tempPlayerList).length === 0) {
                 //搜索没出东西
-                playerSelector(pl, callback, playerList, dt[1])
+                playerSelector(pl, callback, playerList, dt[1]);
                 return;
             } else {
                 //搜索出来了
-                playerSelector(pl, callback, tempPlayerList, "")
+                playerSelector(pl, callback, tempPlayerList, "");
                 return;
             }
         } else {
             callback(pl, Object.keys(playerList)[dt[2]]);
         }
-    })
+    });
 }
 
 /**
- * 
- * @param {player} player 
- * @param {string} landId 
- * @param {boolean} isOrg 
+ *
+ * @param {player} player
+ * @param {string} landId
+ * @param {boolean} isOrg
  */
 function changeOwnerHander(player, landId, isOrg) {
     playerSelector(player, (pl, xuid) => {
@@ -5125,25 +7131,35 @@ function changeOwnerHander(player, landId, isOrg) {
             ManageLand(pl, landId, isOrg);
             return;
         }
-        player.sendModalForm(i18n.$t("changeOwner.title"), i18n.$t("changeOwner.confirm", [data.xuid2name(xuid)]), i18n.$t("common.YES"), i18n.$t("common.NO"), (pl, dt) => {
-            if (dt) {
-                let oldOwner = pLandDataInterface.data[landId].settings.owner;
-                //先处理旧的，再添加新的
-                belongToApi.playerRemoveLand(oldOwner, landId);
-                belongToApi.playerAddShare(oldOwner, landId);
-                pLandDataInterface.data[landId].settings.owner = xuid;
-                //处理新的
-                if (belongToApi.data.shared[xuid] && belongToApi.data.shared[xuid].includes(landId)) {
-                    belongToApi.playerRemoveShare(xuid, landId);
+        player.sendModalForm(
+            i18n.$t("changeOwner.title"),
+            i18n.$t("changeOwner.confirm", [data.xuid2name(xuid)]),
+            i18n.$t("common.YES"),
+            i18n.$t("common.NO"),
+            (pl, dt) => {
+                if (dt) {
+                    let oldOwner =
+                        pLandDataInterface.data[landId].settings.owner;
+                    //先处理旧的，再添加新的
+                    belongToApi.playerRemoveLand(oldOwner, landId);
+                    belongToApi.playerAddShare(oldOwner, landId);
+                    pLandDataInterface.data[landId].settings.owner = xuid;
+                    //处理新的
+                    if (
+                        belongToApi.data.shared[xuid] &&
+                        belongToApi.data.shared[xuid].includes(landId)
+                    ) {
+                        belongToApi.playerRemoveShare(xuid, landId);
+                    }
+                    belongToApi.playerAddLand(xuid, landId);
+                    //保存之
+                    belongToApi.save();
+                    pLandDataInterface.save();
+                    pl.tell(i18n.$t("changeOwner.success"));
                 }
-                belongToApi.playerAddLand(xuid, landId);
-                //保存之
-                belongToApi.save();
-                pLandDataInterface.save();
-                pl.tell(i18n.$t("changeOwner.success"))
             }
-        });
-    })
+        );
+    });
 }
 
 function sharedManageHander(player, landId, isOrg) {
@@ -5155,7 +7171,7 @@ function sharedManageHander(player, landId, isOrg) {
         landData = OlandDataInterface.data[landId];
     } else {
         landData = pLandDataInterface.data[landId];
-    };
+    }
     let fm = mc.newSimpleForm().setTitle(i18n.$t("shared.title"));
     let sharedPlayer = "";
     for (const item of landData.share) {
@@ -5174,7 +7190,7 @@ function sharedManageHander(player, landId, isOrg) {
         if (dt === 1) {
             //删除
             let fm = mc.newCustomForm().setTitle(i18n.$t("shared.title"));
-            let playername = {}
+            let playername = {};
             for (const player of landData.share) {
                 if (data.xuid2name(player)) {
                     playername[player] = data.xuid2name(player);
@@ -5185,9 +7201,12 @@ function sharedManageHander(player, landId, isOrg) {
                 if (dt == null) {
                     sharedManageHander(plar, landId, isOrg);
                     return;
-                };
+                }
                 let targetXuid = Object.keys(playername)[dt[0]];
-                pLandDataInterface.data[landId].share.splice(landData.share.indexOf(targetXuid), 1);
+                pLandDataInterface.data[landId].share.splice(
+                    landData.share.indexOf(targetXuid),
+                    1
+                );
                 belongToApi.playerRemoveShare(targetXuid, landId);
                 pLandDataInterface.save();
                 belongToApi.save();
@@ -5198,7 +7217,7 @@ function sharedManageHander(player, landId, isOrg) {
                 plar.sendForm(fm, (plar, dt) => {
                     sharedManageHander(plar, landId, isOrg);
                 });
-            })
+            });
         } else if (dt === 0) {
             playerSelector(pl, (pla, xuid) => {
                 if (landData.share.includes(xuid)) {
@@ -5226,13 +7245,20 @@ function sharedManageHander(player, landId, isOrg) {
                 }
             });
         }
-    })
-};
+    });
+}
 
 function landResellManager(player, landId, isOrg) {
     let landData = pLandDataInterface.data[landId];
-    let fm = mc.newCustomForm().setTitle(i18n.$t("resell.title")).addLabel(i18n.$t("resell.desp"))
-    fm.addInput(i18n.$t("resell.setprice"), i18n.$t("resell.setpriceDesp"), landData.resell ? String(landData.resell) : "");
+    let fm = mc
+        .newCustomForm()
+        .setTitle(i18n.$t("resell.title"))
+        .addLabel(i18n.$t("resell.desp"));
+    fm.addInput(
+        i18n.$t("resell.setprice"),
+        i18n.$t("resell.setpriceDesp"),
+        landData.resell ? String(landData.resell) : ""
+    );
     player.sendForm(fm, (pl, dt) => {
         if (dt == null) {
             ManageLand(pl, landId, isOrg);
@@ -5273,12 +7299,12 @@ function landResellManager(player, landId, isOrg) {
             ManageLand(pla, landId, isOrg);
         });
         return;
-    })
+    });
 }
 
 /**
- * 
- * @param {player} player 
+ *
+ * @param {player} player
  */
 function landResell(player) {
     let pos = player.blockPos;
@@ -5296,19 +7322,28 @@ function landResell(player) {
         player.tell(i18n.$t("resell.buy.moneyNoEnough"));
         return;
     }
-    player.sendModalForm(i18n.$t("resell.title"), i18n.$t("resell.buy.desp", [landData.resell, landData.settings.name]), i18n.$t("common.YES"), i18n.$t("common.NO"), (pl, dt) => {
-        if (dt) {
-            moneyUni.pay(pl, landData.resell);
-            moneyUni.addMoney(pLandDataInterface.data[landId].settings.owner, landData.resell);
-            pLandDataInterface.data[landId].settings.owner = pl.xuid;
-            delete pLandDataInterface.data[landId].resell;
-            pLandDataInterface.save();
-            pl.tell(i18n.$t("resell.buy.success"));
+    player.sendModalForm(
+        i18n.$t("resell.title"),
+        i18n.$t("resell.buy.desp", [landData.resell, landData.settings.name]),
+        i18n.$t("common.YES"),
+        i18n.$t("common.NO"),
+        (pl, dt) => {
+            if (dt) {
+                moneyUni.pay(pl, landData.resell);
+                moneyUni.addMoney(
+                    pLandDataInterface.data[landId].settings.owner,
+                    landData.resell
+                );
+                pLandDataInterface.data[landId].settings.owner = pl.xuid;
+                delete pLandDataInterface.data[landId].resell;
+                pLandDataInterface.save();
+                pl.tell(i18n.$t("resell.buy.success"));
+            }
         }
-    })
-};
+    );
+}
 
-mc.regConsoleCmd("landex", "公会EX", args => {
+mc.regConsoleCmd("landex", "领地EX", (args) => {
     if (!args[0]) {
         log(i18n.$t("console.error"));
         return;
@@ -5346,7 +7381,10 @@ mc.regConsoleCmd("landex", "公会EX", args => {
                     return;
                 }
                 if (configAPI.data.operator.includes(xuid)) {
-                    configAPI.data.operator.splice(configAPI.data.operator.indexOf(xuid), 1);
+                    configAPI.data.operator.splice(
+                        configAPI.data.operator.indexOf(xuid),
+                        1
+                    );
                     configAPI.save();
                     log(i18n.$t("console.deopPlayer", [args[1], xuid]));
                     return;
@@ -5358,7 +7396,7 @@ mc.regConsoleCmd("landex", "公会EX", args => {
             log(i18n.$t("console.error"));
             break;
     }
-})
+});
 
 function DashBoardInit(player) {
     if (!configAPI.data.operator.includes(player.xuid)) {
@@ -5367,8 +7405,14 @@ function DashBoardInit(player) {
         return;
     }
     let fm = mc.newSimpleForm().setTitle(i18n.$t("dashboard.main.title"));
-    fm.addButton(i18n.$t("dashboard.main.byUUID"), "textures/items/amethyst_shard");
-    fm.addButton(i18n.$t("dashboard.main.byPlayer"), "textures/items/netherite_helmet");
+    fm.addButton(
+        i18n.$t("dashboard.main.byUUID"),
+        "textures/items/amethyst_shard"
+    );
+    fm.addButton(
+        i18n.$t("dashboard.main.byPlayer"),
+        "textures/items/netherite_helmet"
+    );
     fm.addButton(i18n.$t("dashboard.main.byOrgNum"), "textures/items/name_tag");
     fm.addButton(i18n.$t("dashboard.main.this"), "textures/items/map_filled");
     player.sendForm(fm, (pl, dt) => {
@@ -5385,13 +7429,20 @@ function DashBoardInit(player) {
                         return;
                     }
                     PlayerNameManage(pl, xuid);
-                })
+                });
                 break;
             case 2:
                 let numList = Object.keys(belongToApi.data.org);
-                let fm = mc.newSimpleForm().setTitle(i18n.$t("dashboard.main.title"));
+                let fm = mc
+                    .newSimpleForm()
+                    .setTitle(i18n.$t("dashboard.main.title"));
                 for (const orgNum of numList) {
-                    fm.addButton(i18n.$t("dashboard.org.item", [orgAPI.getOrgName(orgNum), orgNum]));
+                    fm.addButton(
+                        i18n.$t("dashboard.org.item", [
+                            orgAPI.getOrgName(orgNum),
+                            orgNum,
+                        ])
+                    );
                 }
                 pl.sendForm(fm, (pl, dt) => {
                     if (dt == null) {
@@ -5410,21 +7461,25 @@ function DashBoardInit(player) {
                             });
                         }
                     }
-                    //构建临时表完成，进行渲染。
+                    //构建临时表完成，进行渲染
                     let fm = mc.newSimpleForm();
                     fm.setTitle(i18n.$t("dashboard.main.title"));
                     for (const item of landList) {
                         if (item.isOrg) {
-                            fm.addButton(i18n.$t("dashboard.gui.Orgitem", [item.name]))
+                            fm.addButton(
+                                i18n.$t("dashboard.gui.Orgitem", [item.name])
+                            );
                         } else {
-                            fm.addButton(i18n.$t("dashboard.gui.Priitem", [item.name]))
+                            fm.addButton(
+                                i18n.$t("dashboard.gui.Priitem", [item.name])
+                            );
                         }
                     }
                     pl.sendForm(fm, (pl, dt) => {
                         let landId = landList[dt].landId;
                         ManageLand(pl, landId, true);
-                    })
-                })
+                    });
+                });
                 break;
             case 3:
                 let pos = pl.blockPos;
@@ -5433,16 +7488,22 @@ function DashBoardInit(player) {
                 let permisstion = [!!pLandId, !!oLandId];
                 if (permisstion[0] && permisstion[1]) {
                     //俩都允许，弹出窗口任选
-                    pl.sendModalForm(i18n.$t("this.manage.choose.title"), i18n.$t("this.manage.choose.desp"), i18n.$t("this.manage.choose.org"), i18n.$t("this.manage.choose.pri"), (pl, dt) => {
-                        if (dt == null) {
-                            return;
+                    pl.sendModalForm(
+                        i18n.$t("this.manage.choose.title"),
+                        i18n.$t("this.manage.choose.desp"),
+                        i18n.$t("this.manage.choose.org"),
+                        i18n.$t("this.manage.choose.pri"),
+                        (pl, dt) => {
+                            if (dt == null) {
+                                return;
+                            }
+                            if (dt) {
+                                ManageLand(pl, oLandId, true);
+                            } else {
+                                ManageLand(pl, pLandId, false);
+                            }
                         }
-                        if (dt) {
-                            ManageLand(pl, oLandId, true);
-                        } else {
-                            ManageLand(pl, pLandId, false);
-                        }
-                    });
+                    );
                 } else if (permisstion[0]) {
                     ManageLand(pl, pLandId, false);
                 } else if (permisstion[1]) {
@@ -5455,13 +7516,13 @@ function DashBoardInit(player) {
             default:
                 break;
         }
-    })
+    });
 }
 
 /**
- * 
- * @param {player} player 
- * @param {string} xuid 
+ *
+ * @param {player} player
+ * @param {string} xuid
  */
 function PlayerNameManage(player, xuid) {
     let landList = [];
@@ -5475,14 +7536,14 @@ function PlayerNameManage(player, xuid) {
             });
         }
     }
-    //构建临时表完成，进行渲染。
+    //构建临时表完成，进行渲染
     let fm = mc.newSimpleForm();
     fm.setTitle(i18n.$t("dashboard.main.title"));
     for (const item of landList) {
         if (item.isOrg) {
-            fm.addButton(i18n.$t("dashboard.gui.Orgitem", [item.name]))
+            fm.addButton(i18n.$t("dashboard.gui.Orgitem", [item.name]));
         } else {
-            fm.addButton(i18n.$t("dashboard.gui.Priitem", [item.name]))
+            fm.addButton(i18n.$t("dashboard.gui.Priitem", [item.name]));
         }
     }
     player.sendForm(fm, (pl, dt) => {
@@ -5491,7 +7552,7 @@ function PlayerNameManage(player, xuid) {
             return;
         }
         ManageLand(pl, landList[dt].landId, false);
-    })
+    });
 }
 
 function UUIDManage(player) {
@@ -5505,7 +7566,10 @@ function UUIDManage(player) {
         }
         let isOrg = !!dt[1];
         let LandId = dt[0];
-        if ((isOrg && !OlandDataInterface.data[LandId]) || (!isOrg && !pLandDataInterface.data[LandId])) {
+        if (
+            (isOrg && !OlandDataInterface.data[LandId]) ||
+            (!isOrg && !pLandDataInterface.data[LandId])
+        ) {
             let fm = mc
                 .newSimpleForm()
                 .setTitle(i18n.$t("dashboard.main.title"))
@@ -5514,13 +7578,11 @@ function UUIDManage(player) {
                 UUIDManage(pla);
             });
             return;
-        };
+        }
         ManageLand(pl, LandId, isOrg);
-    })
+    });
 }
-
-
-//图片文字制作
-logger.log(
-    "欢迎使用LandEX\n __          ___      .__   __.  _______   __________   ___ \r\n|  |        /   \\     |  \\ |  | |       \\ |   ____\\  \\ /  / \r\n|  |       /  ^  \\    |   \\|  | |  .--.  ||  |__   \\  V  /  \r\n|  |      /  /_\\  \\   |  . `  | |  |  |  ||   __|   >   <   \r\n|  `----./  _____  \\  |  |\\   | |  \'--\'  ||  |____ /  .  \\  \r\n|_______/__/     \\__\\ |__| \\__| |_______/ |_______/__/ \\__\\ \r\n"
-)
+ll.export((x, y, z, dim, xuid) => {
+    let land = getPLandIdbyPos(x, y, z, dim);
+    return belongToApi.getLand(xuid).includes(land);
+}, "landEX_GetHasPLandPermbyPos");
