@@ -38,7 +38,7 @@ LandEX 是一个基于 LLSE 的 MC 地皮管理插件，基于 JavaScript 为玩
 ## 使用截图
 
 | <img src="screenshots/Landmanage.png" title="领地管理" alt="" width="219"> | <img src="screenshots/LandPerm.png" title="权限管理" alt="权限管理" width="211"> | <img src="screenshots/LandName.png" title="" alt="" width="221"> |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------- |
 
 ![边缘显示](screenshots/engeLine.png "边缘显示")
 
@@ -96,11 +96,11 @@ LandEX 是一个基于 LLSE 的 MC 地皮管理插件，基于 JavaScript 为玩
         "allow2D": true, //允许2D圈地
         "useOrgnization": true, //启用orgEX联动
         "allowLandTeleport": true, //允许传送到领地
-        "useDrawLine": true, //与PFES的框选粒子联动
+        "useDrawLine": true, //启用框选例子
         "tickRate": 1000, //领地提示刷新时间，无特殊原因不改
         "enableCache": true, //是否启用缓存，建议启用
         "cacheSize": 512, //缓存区大小，无特殊原因不改
-        "defaultSpawn": false //默认生物自然生成
+        "defaultSpawn": false //控制非领地区域是否自然生成
     },
     "limit": {
         "allowDimension": [
@@ -114,7 +114,8 @@ LandEX 是一个基于 LLSE 的 MC 地皮管理插件，基于 JavaScript 为玩
         "type3DVolume": [
             //3D圈地面积限制
             100, 384000
-        ]
+        ],
+        "maxLands": 16 //领地数量限制
     },
     "operator": [
         //领地管理员的XUID
@@ -147,51 +148,55 @@ else price = dx * dy * dz * priceXZ;
 #### 圈地命令
 
 > **/land enclose show**
->
+> 
 > 进入圈地模式并展示上次圈地记录、领地边框，若您已经在圈地模式，则仅会展示领地边框。
->
+> 
 > **/land enclose setpos1**
->
+> 
 > 设置框选点 1，您需要框选两个点确定圈地的范围。输入此命令自动进入圈地模式。
->
+> 
 > **/land enclose setpos2**
->
+> 
 > 设置框选点 2，您需要框选两个点确定圈地的范围。输入此命令自动进入圈地模式。
->
+> 
 > **/land enclose edit**
->
+> 
 > 手动输入具体数字修改圈地范围。
->
+> 
 > **/land enclose cancel**
->
+> 
 > 退出圈地模式
->
+> 
 > **/land enclose confirm**
->
+> 
 > 确认圈地范围，进行圈地。
 
 #### 管理命令
 
 > **/land this**
->
+> 
 > 管理脚下的领地
->
+> 
 > **/land dashboard**
->
+> 
 > 管理员领地选择器
+> 
+> **/land op <玩家名>**
+> 
+> 添加超级领地管理员
 
 #### 其他命令
 
 > **/land tp**
->
+> 
 > 进入领地传送
->
+> 
 > **/land buy**
->
+> 
 > 购买正在出售的领地
->
+> 
 > **/land help**
->
+> 
 > 测试命令，没什么用。
 
 ### 圈地教程

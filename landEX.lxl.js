@@ -6,7 +6,6 @@
 */
 
 /**
- * The complete Triforce, or one or more components of the Triforce.
  * @typedef {Object} pos --坐标对象
  * @property {number} x
  * @property {number} y
@@ -1356,8 +1355,8 @@ let playerState = {};
  * @param {any} color
  * @param {boolean} is2D
  */
+const ps = mc.newParticleSpawner(1024, true, true);
 function drawCube(posMin, posMax, dimid, color, is2D) {
-  const ps = mc.newParticleSpawner(1024, true, true);
   if (is2D) {
     //西北角测
     ps.drawAxialLine(mc.newIntPos(posMin.x, 128, posMin.z, dimid), Direction.NEG_Y, 192, color);
@@ -4225,7 +4224,7 @@ mc.listen('onTakeItem', (player, entity, item) => {
     //管理员
     return;
   }
-  let pos = entity.pos;
+  let pos = entity.blockPos;
   let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
   if (landId) {
     if (pLandDataInterface.inTrust(player.xuid, landId)) {
