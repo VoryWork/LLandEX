@@ -54,9 +54,11 @@ LandEX 是一个基于 LLSE 的 MC 地皮管理插件，基于 JavaScript 为玩
 
 3. 将最新版本的 LandEX 解压至 BDS 根目录的 plugins 文件夹下。
 
-4. 启动**bedrock_server_mod.exe**，等待插件创建配置文件.
+4. 若使用**粒子框选**，你需要启用`plugins/LiteLoader/LiteLoader.json`中`ParticleAPI`
 
-5. 关闭服务器。
+5. 启动**bedrock_server_mod.exe**，等待插件创建配置文件.
+
+6. 关闭服务器。
 
 ### 修改配置文件
 

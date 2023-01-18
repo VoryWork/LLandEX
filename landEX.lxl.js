@@ -117,6 +117,7 @@
  * @property {boolean} allowAnimalSpawn
  * @property {boolean} allowMobSpawn
  * @property {boolean} allowNeutralSpawn
+ * @property {boolean} allowDragonDestory //1.19更新
  */
 
 /**
@@ -185,6 +186,18 @@
  * @property {boolean} allowAttackMobs
  */
 'use strict';
+//LiteLoaderScript Dev Helper
+/// <reference path="c:\Users\XMMPPS\Desktop\程序工程\LXL-Plugins/dts/HelperLib-master/src/index.d.ts"/> 
+
+ll.registerPlugin(
+  /* name */ "LandEX",
+  /* introduction */ "新一代的地皮管理插件",
+  /* version */ [1,0,16],
+  /* otherInformation */ {github:'https://github.com/VoryWork/LLandEX'}
+); 
+
+
+
 logger.setTitle('LandEX');
 logger.setConsole(true, 4);
 if (!File.exists('./plugins/landEX/')) {
@@ -230,6 +243,118 @@ const configAPI = {
       maxLands: 16,
     },
     operator: [],
+    entityType: {
+      blockType: [
+        'minecraft:ender_crystal',
+        'minecraft:painting',
+        'minecraft:boat',
+        'minecraft:chest_minecart',
+        'minecraft:chest_boat',
+        'minecraft:minecart',
+        'minecraft:hopper_minecart',
+        'minecraft:hopper_minecart',
+        'minecraft:tnt_minecart',
+      ], //像物品的
+      peaceful: [
+        'minecraft:allay', //1.19更新
+        'minecraft:axolotl',
+        'minecraft:bat',
+        'minecraft:cat',
+        'minecraft:chicken',
+        'minecraft:cod',
+        'minecraft:cow',
+        'minecraft:donkey',
+        'minecraft:fox',
+        'minecraft:frog', //1.19更新
+        'minecraft:glow_squid',
+        'minecraft:horse',
+        'minecraft:mooshroom',
+        'minecraft:mule',
+        'minecraft:ocelot',
+        'minecraft:parrot',
+        'minecraft:pig',
+        'minecraft:rabbit',
+        'minecraft:salmon',
+        'minecraft:snow_golem',
+        'minecraft:sheep',
+        'minecraft:skeleton_horse',
+        'minecraft:squid',
+        'minecraft:strider',
+        'minecraft:tadpole',
+        'minecraft:tropical_fish',
+        'minecraft:turtle',
+        'minecraft:villager_v2',
+        'minecraft:wandering_trader',
+        'minecraft:npc',
+      ],
+
+      neutral: [
+        'minecraft:pufferfish',
+        'minecraft:bee',
+        'minecraft:dolphin',
+        'minecraft:goat',
+        'minecraft:iron_golem',
+        'minecraft:llama',
+        'minecraft:llama_spit',
+        'minecraft:wolf',
+        'minecraft:panda',
+        'minecraft:polar_bear',
+        'minecraft:enderman',
+        'minecraft:piglin',
+        'minecraft:zombie_pigman',
+      ],
+
+      mob: [
+        'minecraft:blaze',
+        'minecraft:small_fireball',
+        'minecraft:creeper',
+        'minecraft:drowned',
+        'minecraft:elder_guardian',
+        'minecraft:endermite',
+        'minecraft:evocation_illager',
+        'minecraft:evocation_fang',
+        'minecraft:ghast',
+        'minecraft:spider',
+        'minecraft:cave_spider',
+        'minecraft:guardian',
+        'minecraft:hoglin',
+        'minecraft:husk',
+        'minecraft:magma_cube',
+        'minecraft:phantom',
+        'minecraft:pillager',
+        'minecraft:ravager',
+        'minecraft:shulker',
+        'minecraft:silverfish',
+        'minecraft:skeleton',
+        'minecraft:skeleton_horse',
+        'minecraft:slime',
+        'minecraft:vex',
+        'minecraft:vindicator',
+        'minecraft:warden', //1.19更新
+        'minecraft:witch',
+        'minecraft:wither_skeleton',
+        'minecraft:zoglin',
+        'minecraft:zombie',
+        'minecraft:zombie_villager_v2',
+        'minecraft:piglin_brute',
+        'minecraft:ender_dragon',
+        'minecraft:wither',
+        'minecraft:wither_skull',
+        'minecraft:wither_skull_dangerous',
+      ],
+
+      projectile: [
+        'minecraft:fireball',
+        'minecraft:shulker_bullet',
+        'minecraft:dragon_fireball',
+        'minecraft:snowball',
+        'minecraft:fireworks_rocket',
+        'minecraft:thrown_trident',
+        'minecraft:arrow',
+        'minecraft:ender_pearl',
+        'minecraft:egg',
+      ],
+    },
   },
   save() {
     File.writeTo('./plugins/landEX/config.json', JSON.stringify(this.data));
@@ -1458,7 +1583,7 @@ setInterval(() => {
         // 玩家没在游玩，可能在圈地
         return;
       } else {
-        // 对玩家显示圈地
+        // 对玩家显示领地
         playerState[player.xuid].inPLand = result;
         let landData = pLandDataInterface.data[result];
         if (landData.settings.notifyItemBar) {
@@ -2056,6 +2181,7 @@ function encloseMain(player, posInterface, orgNum = null) {
           allowAnimalSpawn: true,
           allowMobSpawn: false,
           allowNeutralSpawn: true,
+          allowDragonDestory:true,
         },
         container: {
           openShulkerBox: false,
@@ -2173,6 +2299,7 @@ function encloseMain(player, posInterface, orgNum = null) {
           allowAnimalSpawn: true,
           allowMobSpawn: false,
           allowNeutralSpawn: true,
+          allowDragonDestory:true,
         },
         container: {
           openShulkerBox: false,
@@ -2751,6 +2878,7 @@ function EntityPermissionManage(player, landId, isOrg = false) {
   fm.addSwitch(i18n.$t('manage.permission.entity.allowMobSpawn'), !!landData.permissions.entity.allowMobSpawn);
   fm.addSwitch(i18n.$t('manage.permission.entity.allowNeutralSpawn'), !!landData.permissions.entity.allowNeutralSpawn);
   fm.addSwitch(i18n.$t('manage.permission.entity.allowAnimalSpawn'), !!landData.permissions.entity.allowAnimalSpawn);
+  fm.addSwitch(i18n.$t('manage.permission.entity.allowDragonDestory'), !!landData.permissions.entity.allowDragonDestory);
   player.sendForm(fm, (pl, dt) => {
     if (dt == null) {
       PermissionManageEntry(pl, landId, isOrg);
@@ -2764,6 +2892,7 @@ function EntityPermissionManage(player, landId, isOrg = false) {
     landData.permissions.entity.allowMobSpawn = dt[5];
     landData.permissions.entity.allowNeutralSpawn = dt[6];
     landData.permissions.entity.allowAnimalSpawn = dt[7];
+    landData.permissions.entity.allowDragonDestory = dt[8];
     if (isOrg) {
       OlandDataInterface.data[landId].permissions = landData.permissions;
       OlandDataInterface.save();
@@ -4287,18 +4416,20 @@ mc.listen('onExperienceAdd', (player, exp) => {
 });
 
 //实体分类
-const entityDB = {
+let entityDB = {
   blockType: [
     'minecraft:ender_crystal',
     'minecraft:painting',
     'minecraft:boat',
     'minecraft:chest_minecart',
+    'minecraft:chest_boat',
     'minecraft:minecart',
     'minecraft:hopper_minecart',
     'minecraft:hopper_minecart',
     'minecraft:tnt_minecart',
   ], //像物品的
   peaceful: [
+    'minecraft:allay', //1.19更新
     'minecraft:axolotl',
     'minecraft:bat',
     'minecraft:cat',
@@ -4307,6 +4438,7 @@ const entityDB = {
     'minecraft:cow',
     'minecraft:donkey',
     'minecraft:fox',
+    'minecraft:frog', //1.19更新
     'minecraft:glow_squid',
     'minecraft:horse',
     'minecraft:mooshroom',
@@ -4321,6 +4453,7 @@ const entityDB = {
     'minecraft:skeleton_horse',
     'minecraft:squid',
     'minecraft:strider',
+    'minecraft:tadpole',
     'minecraft:tropical_fish',
     'minecraft:turtle',
     'minecraft:villager_v2',
@@ -4370,6 +4503,7 @@ const entityDB = {
     'minecraft:slime',
     'minecraft:vex',
     'minecraft:vindicator',
+    'minecraft:warden', //1.19更新
     'minecraft:witch',
     'minecraft:wither_skeleton',
     'minecraft:zoglin',
@@ -4394,6 +4528,13 @@ const entityDB = {
     'minecraft:egg',
   ],
 };
+//同步entityType
+if (configAPI.data.entityType) {
+  entityDB = configAPI.data.entityType;
+} else {
+  configAPI.data.entityType = entityDB;
+  configAPI.save();
+}
 //玩家攻击实体
 mc.listen('onAttackEntity', (player, entity) => {
   if (configAPI.data.operator.includes(player.xuid)) {
@@ -4465,7 +4606,11 @@ mc.listen('onRide', (driver, target) => {
     let landData = pLandDataInterface.data[landId];
     if (isPlayer && target.type === 'minecraft:boat' && landData.permissions.player.allowUseBoat) {
       return;
+    } else if (isPlayer && target.type === 'minecraft:chest_boat' && landData.permissions.player.allowUseBoat) {
+      return;
     } else if (isPlayer && target.type === 'minecraft:boat' && !landData.permissions.player.allowUseBoat) {
+      return false;
+    } else if (isPlayer && target.type === 'minecraft:chest_boat' && !landData.permissions.player.allowUseBoat) {
       return false;
     } else if (isPlayer && target.type === 'minecraft:minecart' && landData.permissions.player.allowUseMinecart) {
       return;
@@ -4474,6 +4619,10 @@ mc.listen('onRide', (driver, target) => {
     } else if (!isPlayer && target.type === 'minecraft:boat' && landData.permissions.entity.allowUseBoat) {
       return;
     } else if (!isPlayer && target.type === 'minecraft:boat' && !landData.permissions.entity.allowUseBoat) {
+      return false;
+    } else if (!isPlayer && target.type === 'minecraft:chest_boat' && landData.permissions.entity.allowUseBoat) {
+      return;
+    } else if (!isPlayer && target.type === 'minecraft:chest_boat' && !landData.permissions.entity.allowUseBoat) {
       return false;
     } else if (!isPlayer && target.type === 'minecraft:minecart' && landData.permissions.entity.allowUseMinecart) {
       return;
@@ -4497,7 +4646,11 @@ mc.listen('onRide', (driver, target) => {
     let landData = OlandDataInterface.data[landId];
     if (isPlayer && target.type === 'minecraft:boat' && landData.permissions.player.allowUseBoat) {
       return;
+    } else if (isPlayer && target.type === 'minecraft:chest_boat' && landData.permissions.player.allowUseBoat) {
+      return;
     } else if (isPlayer && target.type === 'minecraft:boat' && !landData.permissions.player.allowUseBoat) {
+      return false;
+    } else if (isPlayer && target.type === 'minecraft:chest_boat' && !landData.permissions.player.allowUseBoat) {
       return false;
     } else if (isPlayer && target.type === 'minecraft:minecart' && landData.permissions.player.allowUseMinecart) {
       return;
@@ -4506,6 +4659,10 @@ mc.listen('onRide', (driver, target) => {
     } else if (!isPlayer && target.type === 'minecraft:boat' && landData.permissions.entity.allowUseBoat) {
       return;
     } else if (!isPlayer && target.type === 'minecraft:boat' && !landData.permissions.entity.allowUseBoat) {
+      return false;
+    } else if (!isPlayer && target.type === 'minecraft:chest_boat' && landData.permissions.entity.allowUseBoat) {
+      return;
+    } else if (!isPlayer && target.type === 'minecraft:chest_boat' && !landData.permissions.entity.allowUseBoat) {
       return false;
     } else if (!isPlayer && target.type === 'minecraft:minecart' && landData.permissions.entity.allowUseMinecart) {
       return;
@@ -4553,7 +4710,7 @@ mc.listen('onMobHurt', (target, source, damage) => {
 });
 
 //生物生成控制
-mc.listen('onMobSpawn', (type, pos) => {
+mc.listen('onMobTrySpawn', (type, pos) => {
   if (type === 'minecraft:player') {
     //是玩家，不拦截
     return;
@@ -5062,6 +5219,30 @@ mc.listen('onFarmLandDecay', (pos, entity) => {
   }
 });
 
+//末影龙破坏
+mc.listen("onEnderDragonDestroy", (enderDragon,block) => {
+  let pos = block.pos;
+  let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+  if (landId) {
+    let landData = pLandDataInterface.data[landId];
+    if (!landData.permissions.entity.allowDragonDestory) {
+      return false;
+    }
+    return;
+  }
+  if (!enableOrg) {
+    return;
+  }
+  landId = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
+  if (landId) {
+    let landData = OlandDataInterface.data[landId];
+    if (!landData.permissions.entity.allowDragonDestory) {
+      return false;
+    }
+    return;
+  }
+});
+
 //液体流动
 function LiquidFlowEvents(pos) {
   let landId = getPLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
@@ -5086,6 +5267,7 @@ function LiquidFlowEvents(pos) {
 }
 mc.listen('onLiquidFlow', (from, to) => {
   let pos = from.pos;
+  //只要有一个false就禁止
   return LiquidFlowEvents(pos) && LiquidFlowEvents(to);
 });
 

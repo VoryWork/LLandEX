@@ -119,6 +119,7 @@
     "manage.permission.entity.allowMobSpawn": "允许敌对生物自然生成",
     "manage.permission.entity.allowNeutralSpawn": "允许中立生物自然生成",
     "manage.permission.entity.allowAnimalSpawn": "允许和平生物自然生成",
+    "manage.permission.entity.allowDragonDestory": "允许末影龙破坏方块",
     "manage.permission.container.title": "容器权限管理",
     "manage.permission.container.useFrameBlock": "存取展示框物品",
     "manage.permission.container.openShulkerBox": "打开潜影盒",
