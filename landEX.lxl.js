@@ -1,3 +1,15 @@
+//LiteLoaderScript Dev Helper
+/// <reference path="c:\Users\XMMPPS\Desktop\程序工程\LXL-Plugins/dts/HelperLib-master/src/index.d.ts"/> 
+
+ll.registerPlugin(
+  /* name */ "LandEX",
+  /* introduction */ "",
+  /* version */ [1,0,17],
+  /* otherInformation */ {}
+); 
+
+
+
 /*
 =======================================
                 LandEX
@@ -406,10 +418,9 @@ if (File.exists('./plugins/landEX/i18n/' + configAPI.data.common.language + '.js
 
 // 统一的扣款api
 const moneyUni = {
-  offlineMoney: new KVDatabase('./plugins/landEX/offlineMoney/'),
   /**
    * 获取玩家的钱
-   * @param {player} player -player
+   * @param {Player} player -player
    * @returns {number}
    */
   get(player) {
@@ -438,8 +449,7 @@ const moneyUni = {
         return player.reduceMoney(count);
       case 'scoreboard':
         return player.reduceScore(configAPI.data.economy.moneyScoreboard, count);
-      case 'xplevel':
-        return player.reduceLevel(count);
+
     }
   },
   addMoney(xuid, count) {
@@ -447,19 +457,13 @@ const moneyUni = {
       case 'llmoney':
         return money.add(xuid, count);
       case 'scoreboard':
-      case 'xplevel':
         let player = mc.getPlayer(xuid);
         if (player) {
-          switch (configAPI.data.economy.type) {
-            case 'scoreboard':
               return player.addScore(configAPI.data.economy.moneyScoreboard, count);
-            case 'xplevel':
-              return player.addLevel(count);
-          }
+          
         } else {
           //玩家离线
-          let playerMoney = this.offlineMoney.get(xuid) || 0;
-          return this.offlineMoney.set(xuid, playerMoney + count);
+          return mc.addScore(data.xuid2uuid(xuid), playerMoney + count);
         }
     }
   },
@@ -1691,11 +1695,6 @@ mc.listen('onJoin', function (player) {
         posB: [],
       },
     };
-  }
-  //玩家加钱
-  if (moneyUni.offlineMoney.get(player.xuid)) {
-    moneyUni.addMoney(parseInt(moneyUni.offlineMoney.get(player.xuid)));
-    moneyUni.offlineMoney.delete(player.xuid);
   }
   //保存玩家的XUID和名字
   playerDB.data[player.xuid] = player.realName;

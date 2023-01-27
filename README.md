@@ -70,7 +70,7 @@ LandEX 是一个基于 LLSE 的 MC 地皮管理插件，基于 JavaScript 为玩
 {
     "economy": {
         //经济选项
-        "useLLmoney": false, //使用LLmoney，false则为使用记分板
+        "type": "llmoney", //"llmoney"|"scoreboard"(计分板)|"xplevel"(经验)
         "moneyScoreboard": "coin", //货币记分板
         "moneyName": "祭点" //服务器中的货币名称
     },
