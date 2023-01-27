@@ -4,7 +4,7 @@
 ll.registerPlugin(
   /* name */ "LandEX",
   /* introduction */ "",
-  /* version */ [1,0,17],
+  /* version */ [1,0,18],
   /* otherInformation */ {}
 ); 
 
@@ -1507,6 +1507,16 @@ function drawCube(posMin, posMax, dimid, color, is2D) {
 
 setInterval(() => {
   for (const player of mc.getOnlinePlayers()) {
+    FooterGenerator(player)
+  }
+}, configAPI.data.common.tickRate);
+/**
+ * 
+ * @param {Player} player 
+ * @returns void
+ */
+async function FooterGenerator(player){
+  {
     let pos = player.blockPos;
     // 玩家状态
     if (!playerState[player.xuid]) {
@@ -1543,7 +1553,7 @@ setInterval(() => {
         return;
       case 'reEnclosing':
         {
-          // 重新圈地状态
+          // 重新划定范围状态
           let dim = playerState[player.xuid].enclosure.dim;
           let posA = playerState[player.xuid].enclosure.posA.length ? String(playerState[player.xuid].enclosure.posA) : i18n.$t('enclose.edit.nochoose');
           let posB = playerState[player.xuid].enclosure.posB.length ? String(playerState[player.xuid].enclosure.posB) : i18n.$t('enclose.edit.nochoose');
@@ -1615,7 +1625,9 @@ setInterval(() => {
           player.sendText(i18n.$t('resell.notify', [landData.resell]));
         }
       }
-    } //检查团队领地
+    }
+    
+    //检查团队领地
     if (enableOrg) {
       result = getOLandIdbyPos(pos.x, pos.y, pos.z, pos.dimid);
       if (!result) {
@@ -1674,7 +1686,7 @@ setInterval(() => {
       }
     }
   }
-}, configAPI.data.common.tickRate);
+}
 // 玩家进服
 mc.listen('onJoin', function (player) {
   // 写入玩家初始state
