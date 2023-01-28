@@ -2,7 +2,7 @@
 
 # LandEX - 新一代的地皮管理插件
 
-LandEX 是一个基于 LLSE 的 MC 地皮管理插件，基于 JavaScript 为玩家带来高效便捷的地皮使用体验。插件原生支持真命令注册，服内大量 GUI 管理，并可与 OrgEX、LandEX 与 DrawLine 插件联动。
+LandEX 是一个基于 LLSE 的 MC 地皮管理插件，基于 JavaScript 为玩家带来高效便捷的地皮使用体验。插件原生支持真命令注册，服内大量 GUI 管理，并可与 OrgEX 等插件联动。
 
 ### 联系作者
 
@@ -70,7 +70,7 @@ LandEX 是一个基于 LLSE 的 MC 地皮管理插件，基于 JavaScript 为玩
 {
     "economy": {
         //经济选项
-        "type": "llmoney", //"llmoney"|"scoreboard"(计分板)|"xplevel"(经验)
+        "type": "llmoney", //"llmoney"|"scoreboard"(计分板)
         "moneyScoreboard": "coin", //货币记分板
         "moneyName": "祭点" //服务器中的货币名称
     },

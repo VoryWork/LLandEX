@@ -412,8 +412,6 @@ const moneyUni = {
         return player.getMoney();
       case 'scoreboard':
         return player.getScore(configAPI.data.economy.moneyScoreboard);
-      case 'xplevel':
-        return player.getLevel();
     }
   },
   /**
@@ -432,7 +430,6 @@ const moneyUni = {
         return player.reduceMoney(count);
       case 'scoreboard':
         return player.reduceScore(configAPI.data.economy.moneyScoreboard, count);
-
     }
   },
   addMoney(xuid, count) {
@@ -443,7 +440,6 @@ const moneyUni = {
         let player = mc.getPlayer(xuid);
         if (player) {
               return player.addScore(configAPI.data.economy.moneyScoreboard, count);
-          
         } else {
           //玩家离线
           return mc.addScore(data.xuid2uuid(xuid), playerMoney + count);
