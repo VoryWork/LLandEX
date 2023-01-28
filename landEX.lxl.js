@@ -1,15 +1,3 @@
-//LiteLoaderScript Dev Helper
-/// <reference path="c:\Users\XMMPPS\Desktop\程序工程\LXL-Plugins/dts/HelperLib-master/src/index.d.ts"/> 
-
-ll.registerPlugin(
-  /* name */ "LandEX",
-  /* introduction */ "",
-  /* version */ [1,0,18],
-  /* otherInformation */ {}
-); 
-
-
-
 /*
 =======================================
                 LandEX
@@ -198,18 +186,13 @@ ll.registerPlugin(
  * @property {boolean} allowAttackMobs
  */
 'use strict';
-//LiteLoaderScript Dev Helper
-/// <reference path="c:\Users\XMMPPS\Desktop\程序工程\LXL-Plugins/dts/HelperLib-master/src/index.d.ts"/> 
 
 ll.registerPlugin(
   /* name */ "LandEX",
-  /* introduction */ "新一代的地皮管理插件",
-  /* version */ [1,0,16],
+  /* introduction */ "新一代的领地管理插件",
+  /* version */ [1,0,18],
   /* otherInformation */ {github:'https://github.com/VoryWork/LLandEX'}
-); 
-
-
-
+);
 logger.setTitle('LandEX');
 logger.setConsole(true, 4);
 if (!File.exists('./plugins/landEX/')) {
