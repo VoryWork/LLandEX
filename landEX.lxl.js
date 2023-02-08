@@ -1,12 +1,8 @@
 //LiteLoaderScript Dev Helper
-/// <reference path="c:\Users\XMMPPS\Desktop\程序工程\LXL-Plugins/dts/HelperLib-master/src/index.d.ts"/> 
+/// <reference path="g:\Minecraft\LXL\JS_Edit\HelperLib-master/dts/llaids/src/index.d.ts"/> 
 
-ll.registerPlugin(
-  /* name */ "LandEX",
-  /* introduction */ "",
-  /* version */ [1,0,19],
-  /* otherInformation */ {}
-); 
+
+ll.registerPlugin("LandEX","",[1,0,20],{}); 
 
 
 
@@ -357,7 +353,7 @@ const configAPI = {
     },
   },
   save() {
-    File.writeTo('./plugins/landEX/config.json', JSON.stringify(this.data));
+    File.writeTo('./plugins/landEX/config.json', JSON.stringify(this.data, null, '\t'));
   },
   reload() {
     this.data = JSON.parse(File.readFrom('./plugins/landEX/config.json'));
@@ -602,7 +598,7 @@ const belongToApi = {
     return [];
   },
   save() {
-    File.writeTo('./plugins/landEX/owner.json', JSON.stringify(this.data));
+    File.writeTo('./plugins/landEX/owner.json', JSON.stringify(this.data, null, '\t'));
   },
   reload() {
     this.data = JSON.parse(File.readFrom('./plugins/landEX/owner.json'));
@@ -622,7 +618,7 @@ const pLandDataInterface = {
    */
   data: {},
   save() {
-    File.writeTo('./plugins/landEX/priviteLandData.json', JSON.stringify(this.data));
+    File.writeTo('./plugins/landEX/priviteLandData.json', JSON.stringify(this.data, null, '\t'));
   },
   load() {
     this.data = JSON.parse(File.readFrom('./plugins/landEX/priviteLandData.json'));
@@ -741,7 +737,7 @@ const OlandDataInterface = {
    */
   data: {},
   save() {
-    File.writeTo('./plugins/landEX/orgLandData.json', JSON.stringify(this.data));
+    File.writeTo('./plugins/landEX/orgLandData.json', JSON.stringify(this.data, null, '\t'));
   },
   load() {
     this.data = JSON.parse(File.readFrom('./plugins/landEX/orgLandData.json'));
@@ -943,7 +939,7 @@ const ChunkInterface = {
     logger.log('索引构建完成，共产生' + count + '条数据。');
   },
   save() {
-    File.writeTo('./plugins/landEX/landIndex.json', JSON.stringify(this.data));
+    File.writeTo('./plugins/landEX/landIndex.json', JSON.stringify(this.data, null, '\t'));
   },
   /**
    *
@@ -1656,7 +1652,12 @@ async function FooterGenerator(player){
           }
           if (configAPI.data.common.useDrawLine && landData.settings.drawCube) {
             // 画线
-            drawCube(landData.range.min_position, landData.range.max_position, landData.range.dimid, ParticleColor.Green);
+            drawCube(
+              {x: landData.range.min_position[0], y:landData.range.min_position[1],z: landData.range.min_position[2],dimid: landData.range.dimid},
+              {x: landData.range.max_position[0], y:landData.range.max_position[1],z: landData.range.max_position[2],dimid: landData.range.dimid},
+              landData.range.dimid,
+              ParticleColor.Green
+              );
           }
           if (
             playerState[player.xuid].state === 'playing' &&
@@ -1732,8 +1733,8 @@ function CommandEncloseHander(player, action) {
           // 画线
           let posInter = twoPosFormat(playerState[player.xuid].enclosure.posA, playerState[player.xuid].enclosure.posB);
           drawCube(
-            mc.newIntPos(posInter.minX, posInter.minY, posInter.minZ, playerState[player.xuid].enclosure.dim),
-            mc.newIntPos(posInter.minX + posInter.dx, posInter.minY + posInter.dy, posInter.minZ + posInter.dz, playerState[player.xuid].enclosure.dim),
+            {x: posInter.minX, y: posInter.minY,z: posInter.minZ,dimid: playerState[player.xuid].enclosure.dim},
+            {x: posInter.minX + posInter.dx,y: posInter.minY + posInter.dy,z: posInter.minZ + posInter.dz,dimid: playerState[player.xuid].enclosure.dim},
             playerState[player.xuid].enclosure.dim,
             ParticleColor.Red,
             false
@@ -1761,8 +1762,8 @@ function CommandEncloseHander(player, action) {
           // 画线
           let posInter = twoPosFormat(playerState[player.xuid].enclosure.posA, playerState[player.xuid].enclosure.posB);
           drawCube(
-            mc.newIntPos(posInter.minX, posInter.minY, posInter.minZ, playerState[player.xuid].enclosure.dim),
-            mc.newIntPos(posInter.minX + posInter.dx, posInter.minY + posInter.dy, posInter.minZ + posInter.dz, playerState[player.xuid].enclosure.dim),
+            {x: posInter.minX, y: posInter.minY,z: posInter.minZ,dimid: playerState[player.xuid].enclosure.dim},
+            {x: posInter.minX + posInter.dx,y: posInter.minY + posInter.dy,z: posInter.minZ + posInter.dz,dimid: playerState[player.xuid].enclosure.dim},
             playerState[player.xuid].enclosure.dim,
             ParticleColor.Red,
             false
@@ -1784,8 +1785,8 @@ function CommandEncloseHander(player, action) {
         // 画线
         let posInter = twoPosFormat(playerState[player.xuid].enclosure.posA, playerState[player.xuid].enclosure.posB);
         drawCube(
-          mc.newIntPos(posInter.minX, posInter.minY, posInter.minZ,playerState[player.xuid].enclosure.dim),
-          mc.newIntPos(posInter.minX + posInter.dx, posInter.minY + posInter.dy, posInter.minZ + posInter.dz,playerState[player.xuid].enclosure.dim),
+          {x: posInter.minX, y: posInter.minY,z: posInter.minZ,dimid: playerState[player.xuid].enclosure.dim},
+          {x: posInter.minX + posInter.dx,y: posInter.minY + posInter.dy,z: posInter.minZ + posInter.dz,dimid: playerState[player.xuid].enclosure.dim},
           playerState[player.xuid].enclosure.dim,
           ParticleColor.Red,
           false
@@ -1837,8 +1838,8 @@ function CommandEncloseHander(player, action) {
             // 画线
             let posInter = twoPosFormat(playerState[player.xuid].enclosure.posA, playerState[player.xuid].enclosure.posB);
             drawCube(
-              mc.newIntPos(posInter.minX, posInter.minY, posInter.minZ,playerState[player.xuid].enclosure.dim),
-              mc.newIntPos(posInter.minX + posInter.dx, posInter.minY + posInter.dy, posInter.minZ + posInter.dzplayerState[player.xuid].enclosure.dim),
+              {x: posInter.minX, y: posInter.minY,z: posInter.minZ,dimid: playerState[player.xuid].enclosure.dim},
+              {x: posInter.minX + posInter.dx,y: posInter.minY + posInter.dy,z: posInter.minZ + posInter.dz,dimid: playerState[player.xuid].enclosure.dim},
               playerState[player.xuid].enclosure.dim,
               ParticleColor.Red,
               false
